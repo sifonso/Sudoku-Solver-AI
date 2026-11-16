@@ -40,10 +40,10 @@ Krankmeldungen-Übersicht,abwesenheiten,must,yes,yes,"S09 mit betroffenen Schich
 Resturlaubsanzeige,abwesenheiten,should,yes,partial,"Anspruch pro Person (S08), Rest in S22/S10; gesetzliche Feiertage fehlen noch"
 Urlaubssperren,abwesenheiten,should,yes,yes,S10 Reiter Sperren (Chef); DB lehnt Anträge in Sperre ab
 Ersatz anfragen per Push (Springer),abwesenheiten,should,yes,partial,"""Ersatz finden"" öffnet Zuweisen mit Hinweisen; Push-Anfrage an mehrere fehlt"
-Schicht zum Tausch anbieten,schichttausch,must,yes,no,schichttausch
-Auf Tauschangebot bewerben,schichttausch,must,yes,no,schichttausch
-Tausch genehmigen oder Auto-Genehmigung,schichttausch,must,yes,no,schichttausch
-Qualifikationsprüfung beim Tausch,schichttausch,should,yes,no,schichttausch
+Schicht zum Tausch anbieten,schichttausch,must,yes,yes,S24; eigene Schichten der nächsten 4 Wochen
+Auf Tauschangebot bewerben,schichttausch,must,yes,yes,"S24 ""Ich übernehme""; Anbieter wird benachrichtigt"
+Tausch genehmigen oder Auto-Genehmigung,schichttausch,must,yes,yes,"Anbieter wählt, Planer gibt frei/lehnt ab; ohne Freigabepflicht sofort (Einstellung im Schema)"
+Qualifikationsprüfung beim Tausch,schichttausch,should,yes,partial,"Planer sieht beim Freigeben alle Hinweise (Qualifikation, Ruhezeit, Abwesenheit, Stunden); Pflege der Qualifikationen fehlt"
 Standardaufgaben an Schichttypen hängen,aufgaben,must,yes,no,S13
 Sonderaufgabe für einzelne Zuweisung,aufgaben,must,yes,no,S04/S13
 Aufgaben abhaken,aufgaben,must,yes,no,aufgabenverwaltung

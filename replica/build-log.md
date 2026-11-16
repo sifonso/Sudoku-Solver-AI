@@ -26,7 +26,8 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-D
 | S10 Urlaub (Team) | 2026-11-16 | fertig | – | Knöpfe in Zeilen waren über aria-disabled blockiert (BUG-004) |
 | S22 Urlaub beantragen | 2026-11-16 | fertig | Feiertage je Bundesland | „0 Tage“ bei Anträgen im Folgejahr (BUG-005) |
 | S23 Krank melden | 2026-11-16 | fertig | – | Mitteilung nannte „Krankmeldung“ (BUG-007, Migration) |
-| S06, S11–S20, S24, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
+| S24 Schichttausch | 2026-11-16 | fertig | Angebot zurückziehen; Ablauf-Job | Chef kam über „Mehr“ nicht hin (BUG-008, Tab-Konfiguration) |
+| S06, S11–S20, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
 
 ## Technik, die nicht offensichtlich war
 

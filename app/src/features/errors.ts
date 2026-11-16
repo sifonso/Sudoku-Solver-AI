@@ -11,6 +11,8 @@ export function errorText(e: unknown): string {
     case 'absence_overlap': return 'Für diesen Zeitraum gibt es schon eine Abwesenheit.';
     case 'vacation_blocked': return 'In diesem Zeitraum ist eine Urlaubssperre. Bitte einen anderen Zeitraum wählen oder mit dem Chef sprechen.';
     case 'already_decided': return 'Darüber wurde schon entschieden.';
+    case 'swap_not_open': return 'Dieses Angebot ist nicht mehr offen.';
+    case 'not_an_applicant': return 'Diese Person hat sich nicht beworben.';
     case 'no_double_booking': return 'Diese Person ist zu der Zeit schon eingeteilt.';
     case 'not_found': return 'Das gibt es nicht mehr. Bitte die Ansicht neu laden.';
     case 'rate_limited': return 'Zu viele Versuche. Bitte in ein paar Minuten noch einmal.';

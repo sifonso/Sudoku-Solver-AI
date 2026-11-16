@@ -156,6 +156,24 @@ test('LIVE-05c Abwesenheiten: neutrale Mitteilung, Entscheiden, Sperre, Zurückz
   expect((await u.B.c.rpc('cancel_absence', { p_absence_id: w.data })).error).toBeNull();
 });
 
+test('LIVE-05d Schichttausch: anbieten, melden, wählen, freigeben', async () => {
+  const asg = await u.B.c.from('assignments').select('id, shift_id').eq('member_id', memberB).limit(1).single();
+  const offer = await u.B.c.rpc('offer_swap', { p_assignment_id: asg.data!.id });
+  expect(offer.error).toBeNull();
+  expect((await u.B.c.rpc('offer_swap', { p_assignment_id: asg.data!.id })).error?.code).toBe('23505');
+  expect((await u.B.c.rpc('apply_swap', { p_swap_id: offer.data })).error?.code).toBe('42501');
+  expect((await u.A.c.rpc('apply_swap', { p_swap_id: offer.data })).error).toBeNull();
+  const chef = await u.A.c.from('members').select('id').eq('user_id', u.A.id).single();
+  expect((await u.B.c.rpc('decide_swap', { p_swap_id: offer.data, p_member_id: chef.data!.id, p_approve: true })).data).toBe('pending_approval');
+  expect((await u.B.c.rpc('decide_swap', { p_swap_id: offer.data, p_member_id: chef.data!.id, p_approve: true })).error?.code).toBe('42501');
+  expect((await u.A.c.rpc('decide_swap', { p_swap_id: offer.data, p_member_id: chef.data!.id, p_approve: true })).data).toBe('approved');
+  const moved = await u.A.c.from('assignments').select('member_id').eq('id', asg.data!.id).single();
+  expect(moved.data!.member_id).toBe(chef.data!.id);
+  const notes = await u.B.c.from('notifications').select('type').eq('type', 'swap_approved');
+  expect(notes.data?.length).toBe(1);
+  expect((await u.C.c.from('swap_requests').select('*')).data).toEqual([]);
+});
+
 test('LIVE-06 Fremde Person sieht nichts', async () => {
   for (const tb of ['tenants', 'members', 'shifts', 'assignments', 'notifications', 'invitations', 'member_contacts', 'absences']) {
     const r = await u.C.c.from(tb).select('*');

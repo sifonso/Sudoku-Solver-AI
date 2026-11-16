@@ -6,7 +6,7 @@ import { createClient, processLock, type PostgrestError } from '@supabase/supaba
 import { AppState, Platform } from 'react-native';
 import { addDays, isoWeekday, shiftBounds } from '../domain/time';
 import type {
-  Absence, VacationBlock, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 import { ApiError, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { DEFAULT_SHIFT_TYPES } from './defaults';
@@ -74,6 +74,8 @@ function fail(e: PostgrestError | { message?: string; code?: string; status?: nu
   if (msg.includes('no_overlapping_absence')) throw new ApiError('absence_overlap');
   if (msg.includes('vacation_blocked')) throw new ApiError('vacation_blocked');
   if (msg.includes('already_decided')) throw new ApiError('already_decided');
+  if (msg.includes('swap_not_open') || (code === '23505' && msg.includes('swap_one_active'))) throw new ApiError('swap_not_open');
+  if (msg.includes('not_an_applicant')) throw new ApiError('not_an_applicant');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
   throw new ApiError('network', msg || code || 'unbekannter Fehler');
 }
@@ -353,6 +355,28 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async removeVacationBlock(id) {
       const r = await q(sb.from('vacation_blocks').delete().eq('id', id).select('id'));
       if (!(r as Row[]).length) throw new ApiError('forbidden');
+    },
+    async listSwaps(tenantId) {
+      const rows = await q(sb.from('swap_requests')
+        .select('*, swap_applications(member_id), assignments(*, shifts(*, shift_types(*, shift_type_qualifications(qualification_id))))')
+        .eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(200));
+      // Zuweisungen anderer sind für Mitarbeiter evtl. per RLS unsichtbar (employees_see_full_plan = false): dann fehlt assignments.
+      return (rows as Row[]).filter((r) => r.assignments?.shifts).map((r): SwapView => ({
+        id: r.id, tenantId: r.tenant_id, status: r.status, offeredBy: r.offered_by, chosenMemberId: r.chosen_member_id,
+        applicantIds: (r.swap_applications ?? []).map((x: Row) => x.member_id),
+        assignment: toAssignment(r.assignments), shift: toShift(r.assignments.shifts),
+        shiftType: r.assignments.shifts.shift_types ? toShiftType(r.assignments.shifts.shift_types) : null,
+        expiresAt: r.expires_at, createdAt: r.created_at,
+      }));
+    },
+    async offerSwap(assignmentId) {
+      return (await q(sb.rpc('offer_swap', { p_assignment_id: assignmentId }))) as string;
+    },
+    async applySwap(swapId) {
+      await q(sb.rpc('apply_swap', { p_swap_id: swapId }));
+    },
+    async decideSwap(swapId, memberId, approve) {
+      return (await q(sb.rpc('decide_swap', { p_swap_id: swapId, p_member_id: memberId, p_approve: approve }))) as 'approved' | 'pending_approval' | 'rejected';
     },
     async markNotificationsRead(ids) {
       if (!ids.length) return;

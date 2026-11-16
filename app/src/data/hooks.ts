@@ -171,3 +171,36 @@ export function useVacationBlockMutations() {
     remove: useMutation({ mutationFn: (id: string) => api.removeVacationBlock(id), onSettled: inv }),
   };
 }
+
+export function useSwaps() {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['swaps', tenant.id], queryFn: () => api.listSwaps(tenant.id) });
+}
+
+function useInvalidateSwaps() {
+  const qc = useQueryClient();
+  return () => {
+    for (const k of ['swaps', 'plan', 'myShifts', 'candidates', 'notifications']) qc.invalidateQueries({ queryKey: [k] });
+  };
+}
+
+export function useSwapMutations() {
+  const inv = useInvalidateSwaps();
+  return {
+    offer: useMutation({ mutationFn: (assignmentId: string) => api.offerSwap(assignmentId), onSettled: inv }),
+    apply: useMutation({ mutationFn: (swapId: string) => api.applySwap(swapId), onSettled: inv }),
+    decide: useMutation({
+      mutationFn: (i: { swapId: string; memberId: string; approve: boolean }) => api.decideSwap(i.swapId, i.memberId, i.approve),
+      onSettled: inv,
+    }),
+  };
+}
+
+/** Warnungen für den gewählten Bewerber (nur Planer dürfen check_assignment aufrufen). */
+export function useSwapWarnings(shiftId: string | null, memberId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['swapWarnings', shiftId, memberId],
+    queryFn: () => api.checkAssignment(shiftId!, memberId!),
+    enabled: enabled && !!shiftId && !!memberId,
+  });
+}

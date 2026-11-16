@@ -38,7 +38,9 @@ export default function TabsLayout() {
           name={t.name}
           options={{
             title: t.title,
-            href: visible(t) ? undefined : null,
+            // Nicht `href: null`: das macht die Route für diese Rolle unerreichbar (BUG-008).
+            // Nur die Schaltfläche ausblenden, damit z. B. "Mehr → Schichttausch" für den Chef funktioniert.
+            ...(visible(t) ? {} : { tabBarButton: () => null, tabBarItemStyle: { display: 'none' as const } }),
             tabBarIcon: ({ color, size }) => <t.icon color={color} size={size} />,
           }}
         />

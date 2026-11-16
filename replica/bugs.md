@@ -2,7 +2,7 @@
 
 Gefunden mit der Testsuite am 2026-11-16 (Build e649836 bis b014bd4). Fehler aus den Durchstich-Läufen davor stehen in `build-log.md`.
 
-Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 7 (S2: 1, S3: 5, S4: 1).
+Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 8 (S2: 2, S3: 5, S4: 1).
 
 ### BUG-001: Checkbox meldet ihren Zustand nicht, solange sie nicht angehakt ist
 
@@ -110,6 +110,22 @@ Expected: Laut architecture.md neutraler Text ohne Gesundheitsbezug, weil Mittei
 Actual: Titel „Krankmeldung“.
 Evidence: Code-Lesung der Funktion `report_sick`, jetzt durch F06-H1 und LIVE-05c abgesichert.
 Status: fixed in Migration `absence_privacy` (live eingespielt): Titel „Neue Abwesenheit“, Text „Bitte den Plan prüfen.“, ohne Namen
+
+### BUG-008: Chef erreicht Schichttausch, Schnellaktionen und eigene Schichten nicht
+
+- Severity: S2
+- Flow / case: F07 / F07-E0
+- Screen: Mehr → S24, S16, S21 (Rolle Chef)
+- Build: 6. M2-Commit  Browser / device: Chromium 1243, 390 und 1440 px
+
+Steps
+1. Als Chef anmelden
+2. Mehr → „Schichttausch“
+
+Expected: S24 öffnet sich.
+Actual: Die App bleibt auf dem Plan. Für Rollen ausgeblendete Reiter waren mit `href: null` konfiguriert; damit ist die Route nicht nur unsichtbar, sondern unerreichbar.
+Evidence: Screenshot zu F07-H2 (Plan statt Tausch), Regressionstest F07-E0.
+Status: fixed in SWAPFIX (nur die Schaltfläche in der Tab-Leiste wird ausgeblendet, `src/app/(app)/(tabs)/_layout.tsx`)
 
 ## Zu prüfen (nicht reproduziert)
 

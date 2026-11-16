@@ -123,3 +123,20 @@ export interface Session {
   userId: string;
   email: string;
 }
+
+export type SwapStatus = 'open' | 'pending_approval' | 'approved' | 'rejected' | 'cancelled' | 'expired';
+
+/** Tauschangebot mit allem, was die Ansicht braucht (Schicht, Bewerber). */
+export interface SwapView {
+  id: string;
+  tenantId: string;
+  status: SwapStatus;
+  offeredBy: string;
+  chosenMemberId: string | null;
+  applicantIds: string[];
+  assignment: Assignment;
+  shift: Shift;
+  shiftType: ShiftType | null;
+  expiresAt: string | null;
+  createdAt: string;
+}

@@ -374,6 +374,82 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       if (!b || me(b.tenantId).role !== 'chef') throw new ApiError('forbidden');
       db.vacationBlocks = db.vacationBlocks.filter((x) => x.id !== id);
     },
+    async listSwaps(tenantId) {
+      await wait();
+      me(tenantId);
+      return db.swaps.filter((w) => w.tenantId === tenantId).flatMap((w) => {
+        const assignment = db.assignments.find((a) => a.id === w.assignmentId);
+        const shift = assignment && db.shifts.find((x) => x.id === assignment.shiftId);
+        if (!assignment || !shift) return [];
+        return [{
+          id: w.id, tenantId, status: w.status, offeredBy: w.offeredBy, chosenMemberId: w.chosenMemberId,
+          applicantIds: [...w.applicantIds], assignment: { ...assignment }, shift: { ...shift },
+          shiftType: db.shiftTypes.find((t) => t.id === shift.shiftTypeId) ?? null, expiresAt: w.expiresAt, createdAt: w.createdAt,
+        }];
+      });
+    },
+    async offerSwap(assignmentId) {
+      await wait();
+      const a = db.assignments.find((x) => x.id === assignmentId);
+      if (!a || a.memberId !== me(a.tenantId).id) throw new ApiError('forbidden');
+      // unique swap_one_active_per_assignment
+      if (db.swaps.some((w) => w.assignmentId === assignmentId && (w.status === 'open' || w.status === 'pending_approval'))) throw new ApiError('swap_not_open');
+      const id = uid();
+      db.swaps.push({ id, tenantId: a.tenantId, assignmentId, offeredBy: a.memberId, status: 'open', chosenMemberId: null, applicantIds: [], expiresAt: a.startAt, createdAt: new Date().toISOString() });
+      return id;
+    },
+    async applySwap(swapId) {
+      await wait();
+      const w = db.swaps.find((x) => x.id === swapId);
+      if (!w) throw new ApiError('not_found');
+      const m = me(w.tenantId);
+      if (m.id === w.offeredBy) throw new ApiError('forbidden');
+      if (w.status !== 'open') throw new ApiError('swap_not_open');
+      if (!w.applicantIds.includes(m.id)) w.applicantIds.push(m.id);
+      notify(w.tenantId, w.offeredBy, 'swap_application', 'Bewerbung auf deinen Tausch', `${m.displayName} würde übernehmen.`, { swap_id: w.id });
+    },
+    async decideSwap(swapId, memberId, approve) {
+      await wait();
+      const w = db.swaps.find((x) => x.id === swapId);
+      if (!w) throw new ApiError('not_found');
+      const actor = me(w.tenantId);
+      const tenant = tenantOf(w.tenantId);
+      const planner = canPlan(actor.role);
+      const a = db.assignments.find((x) => x.id === w.assignmentId)!;
+      const finish = () => {
+        const chosen = w.chosenMemberId!;
+        const shift = db.shifts.find((x) => x.id === a.shiftId)!;
+        if (db.assignments.some((x) => x.id !== a.id && x.memberId === chosen && overlaps(x.startAt, x.endAt, a.startAt, a.endAt))) {
+          throw new ApiError('no_double_booking');
+        }
+        a.memberId = chosen;
+        w.status = 'approved';
+        for (const id of [w.offeredBy, chosen]) notify(w.tenantId, id, 'swap_approved', 'Schichttausch bestätigt', `${formatDate(shift.date)}`, { swap_id: w.id });
+        return 'approved' as const;
+      };
+      if (w.status === 'open' && actor.id === w.offeredBy) {
+        if (!w.applicantIds.includes(memberId)) throw new ApiError('not_an_applicant');
+        w.chosenMemberId = memberId;
+        if (tenant.swapRequiresApproval) {
+          w.status = 'pending_approval';
+          for (const p of db.members.filter((x) => x.tenantId === w.tenantId && x.status === 'active' && canPlan(x.role))) {
+            notify(w.tenantId, p.id, 'swap_pending', 'Schichttausch wartet auf Freigabe', '', { swap_id: w.id });
+          }
+          return 'pending_approval';
+        }
+        return finish();
+      }
+      if (w.status === 'pending_approval' && planner) {
+        if (!approve) {
+          w.status = 'rejected';
+          for (const id of [w.offeredBy, w.chosenMemberId!]) notify(w.tenantId, id, 'swap_rejected', 'Schichttausch abgelehnt', '', { swap_id: w.id });
+          return 'rejected';
+        }
+        return finish();
+      }
+      if (w.status !== 'open' && w.status !== 'pending_approval') throw new ApiError('already_decided');
+      throw new ApiError('forbidden');
+    },
     async markNotificationsRead(ids) {
       const s = requireSession();
       const mine = new Set(db.members.filter((m) => m.userId === s.userId).map((m) => m.id));

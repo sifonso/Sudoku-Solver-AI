@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test as base, expect, type Page } from '@playwright/test';
+export type { Page };
 
 // Jeder Test schlägt fehl bei Konsolenfehlern, Seitenfehlern oder 5xx-Antworten.
 export const test = base.extend<{ guard: void }>({

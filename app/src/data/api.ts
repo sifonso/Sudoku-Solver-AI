@@ -2,7 +2,7 @@
 // Supabase-Umsetzung erfüllen dieselbe Signatur, Screens merken den Tausch nicht.
 // Namen folgen den RPCs/Tabellen aus replica/architecture.md.
 import type {
-  Absence, VacationBlock, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 
 export class ApiError extends Error {
@@ -26,7 +26,9 @@ export type ApiErrorCode =
   | 'last_chef'
   | 'absence_overlap'
   | 'vacation_blocked'
-  | 'already_decided';
+  | 'already_decided'
+  | 'swap_not_open'
+  | 'not_an_applicant';
 
 export interface Membership {
   tenant: Tenant;
@@ -86,6 +88,13 @@ export interface Api {
   listVacationBlocks(tenantId: string): Promise<VacationBlock[]>;
   addVacationBlock(tenantId: string, start: string, end: string, reason: string | null): Promise<void>;
   removeVacationBlock(id: string): Promise<void>;
+
+  // Schichttausch (rpc offer_swap, apply_swap, decide_swap; alle Mitglieder sehen die Tauschbörse)
+  listSwaps(tenantId: string): Promise<SwapView[]>;
+  offerSwap(assignmentId: string): Promise<string>;
+  applySwap(swapId: string): Promise<void>;
+  /** Anbieter wählt Bewerber (approve egal) oder Planer gibt frei/lehnt ab. */
+  decideSwap(swapId: string, memberId: string, approve: boolean): Promise<'approved' | 'pending_approval' | 'rejected'>;
 
   // Benachrichtigungen
   listNotifications(tenantId: string): Promise<AppNotification[]>;
