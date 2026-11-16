@@ -235,3 +235,34 @@ export function useTaskMutations() {
     uncomplete: useMutation({ mutationFn: (completionId: string) => api.uncompleteTask(completionId), onSettled: inv }),
   };
 }
+
+export function useQuickActions() {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['quick', tenant.id], queryFn: () => api.listQuickActions(tenant.id) });
+}
+
+export function useQuickEntries(since: string, quickActionId?: string) {
+  const { tenant } = useActive();
+  return useQuery({
+    queryKey: ['quickEntries', tenant.id, since, quickActionId ?? 'all'],
+    queryFn: () => api.listEntries(tenant.id, since, quickActionId),
+    refetchInterval: 60_000, // Fälligkeit aktualisieren
+  });
+}
+
+export function useQuickMutations() {
+  const qc = useQueryClient();
+  const { tenant } = useActive();
+  const inv = () => {
+    for (const k of ['quick', 'quickEntries']) qc.invalidateQueries({ queryKey: [k] });
+  };
+  return {
+    addEntry: useMutation({
+      mutationFn: (i: { quickActionId: string; values: Record<string, string> }) => api.addEntry(tenant.id, i.quickActionId, i.values),
+      onSettled: inv,
+    }),
+    save: useMutation({ mutationFn: (i: Parameters<typeof api.saveQuickAction>[0]) => api.saveQuickAction(i), onSettled: inv }),
+    archive: useMutation({ mutationFn: (id: string) => api.archiveQuickAction(id), onSettled: inv }),
+    saveFolder: useMutation({ mutationFn: (i: Parameters<typeof api.saveFolder>[0]) => api.saveFolder(i), onSettled: inv }),
+  };
+}

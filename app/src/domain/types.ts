@@ -162,3 +162,46 @@ export interface TaskCompletion {
   memberId: string;
   completedAt: string;
 }
+
+export type QuickFieldType = 'number' | 'text' | 'check';
+export interface QuickField {
+  key: string;
+  label: string;
+  type: QuickFieldType;
+  unit?: string;
+  min?: number;
+  max?: number;
+  required?: boolean;
+}
+export type QuickPair = 'lavender' | 'orange' | 'burgundy' | 'moos';
+export type QuickIcon = 'thermometer' | 'package' | 'sparkles' | 'clipboard' | 'coffee' | 'droplets' | 'truck' | 'shield';
+
+export interface QuickFolder {
+  id: string;
+  tenantId: string;
+  name: string;
+  pair: QuickPair;
+  sort: number;
+}
+
+export interface QuickAction {
+  id: string;
+  tenantId: string;
+  folderId: string | null;
+  name: string;
+  icon: QuickIcon;
+  pair: QuickPair;
+  fields: QuickField[];
+  reminderTimes: string[]; // 'HH:MM' lokal
+  sort: number;
+  archivedAt: string | null;
+}
+
+export interface QuickEntry {
+  id: string;
+  quickActionId: string;
+  memberId: string;
+  values: Record<string, string>;
+  outOfRange: boolean;
+  recordedAt: string;
+}

@@ -2,7 +2,7 @@
 
 Gefunden mit der Testsuite am 2026-11-16 (Build e649836 bis b014bd4). Fehler aus den Durchstich-Läufen davor stehen in `build-log.md`.
 
-Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 9 (S2: 2, S3: 6, S4: 1).
+Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 12 (S2: 2, S3: 9, S4: 1).
 
 ### BUG-001: Checkbox meldet ihren Zustand nicht, solange sie nicht angehakt ist
 
@@ -137,6 +137,40 @@ Expected: Gruppe von Checkboxen mit Namen (role group).
 Actual: Container mit role list, Kinder sind checkboxes. axe meldet `aria-required-children` (critical), 2 Treffer.
 Evidence: Test A11Y-S13/S14 rot.
 Status: fixed in 7150980 (`role="group"`, `src/ui/Navigation.tsx`)
+
+### BUG-010: Kacheln haben ein Label, das nicht zum sichtbaren Text passt
+
+- Severity: S3
+- Flow / case: F09 / A11Y-S16
+- Screen: S16, S18
+
+Actual: Label „Reinigung, 2 Aktionen“, sichtbar zusätzlich „Fällig“; axe `label-content-name-mismatch` (5 Treffer).
+Status: fixed in QUICKFIX (Name aus dem Inhalt, `src/ui/Tiles.tsx`)
+
+### BUG-011: Ordner-Kachel zählt 0 Aktionen und wird nie fällig
+
+- Severity: S3
+- Flow / case: F09 / F09-H1
+- Screen: S16
+
+Steps
+1. Als Mira Schnellaktionen öffnen
+
+Expected: „Reinigung 2 Aktionen“.
+Actual: „Reinigung 0 Aktionen“. Die Startseite gab nur Aktionen ohne Ordner ins Raster, das daraus auch den Ordnerinhalt zählte. Fällige Aktionen im Ordner hätten die Kachel nie markiert.
+Evidence: Accessibility-Snapshot `button "Reinigung 0 Aktionen"`.
+Status: fixed in QUICKFIX (`src/features/QuickGrid.tsx`)
+
+### BUG-012: Listenzeilen quetschen den Titel auf Buchstabenbreite
+
+- Severity: S3
+- Flow / case: F09 / F09-H4
+- Screen: S19 (betrifft jede ListRow mit breiten Aktionen, 390 px)
+
+Expected: Titel lesbar, Aktionen notfalls in der nächsten Zeile.
+Actual: Titel „Kühlung“ stand senkrecht, ein Buchstabe pro Zeile.
+Evidence: Screenshot zu F09-H4 (Telefon).
+Status: fixed in QUICKFIX (Mindestbreite und Umbruch in `ListRow`; Icon-Knöpfe in S19); Test prüft Titelbreite
 
 ## Zu prüfen (nicht reproduziert)
 

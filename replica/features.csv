@@ -51,12 +51,12 @@ Wiederkehrende Aufgaben,aufgaben,should,yes,partial,Wiederholung je Schicht und 
 Priorität und Fälligkeit,aufgaben,could,yes,partial,Priorität ja (Sortierung); Fälligkeitszeit fehlt
 Aufgaben-Log,aufgaben,should,yes,no,Tab S15
 Gelöschte Aufgaben anzeigen,aufgaben,could,yes,yes,"S13 Checkbox, Wiederherstellen"
-Schnellaktionen-Kachelstart,schnellaktionen,must,yes,no,S16
-Eigene Schnellaktionen mit Messfeldern Farbe Icon,schnellaktionen,must,yes,no,schnellaktionen
-Ordner für Schnellaktionen,schnellaktionen,should,yes,no,S16
-Erinnerungen zu festen Zeiten,schnellaktionen,should,yes,no,schnellaktionen
-Protokoll-Export für Audits,schnellaktionen,should,yes,no,schnellaktionen
-Heute: wer arbeitet heute,schnellaktionen,should,yes,no,S16
+Schnellaktionen-Kachelstart,schnellaktionen,must,yes,yes,"S16 mit Fälligkeit, ""Heute"", ""Aufgaben"""
+Eigene Schnellaktionen mit Messfeldern Farbe Icon,schnellaktionen,must,yes,yes,"S19: Felder Zahl/Text/Häkchen, Einheit, Grenzwerte, Pflicht; Abweichung bestimmt der Server"
+Ordner für Schnellaktionen,schnellaktionen,should,yes,yes,"S18, neuer Ordner direkt in S19"
+Erinnerungen zu festen Zeiten,schnellaktionen,should,yes,partial,Fälligkeit in der App; Push-Erinnerung (Job) fehlt
+Protokoll-Export für Audits,schnellaktionen,should,yes,partial,Verlauf 7 Tage in S17; Datei-Export fehlt
+Heute: wer arbeitet heute,schnellaktionen,should,yes,yes,S20
 Übergabe-Protokoll pro Schicht,schichtplanung,could,yes,no,pflege/produktion
 Push-Benachrichtigungen (APNs/FCM),benachrichtigungen,must,yes,partial,Registrierung + send-push gebaut; aktiv nach EAS-Projekt und Webhook
 In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,partial,S25 + Glocke mit Zähler; Trigger im Schema ergänzt

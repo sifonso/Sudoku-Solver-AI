@@ -18,6 +18,9 @@ export interface DB {
   assignments: Assignment[];
   absences: Absence[];
   vacationBlocks: VacationBlock[];
+  quickFolders: import('../domain/types').QuickFolder[];
+  quickActions: import('../domain/types').QuickAction[];
+  quickEntries: import('../domain/types').QuickEntry[];
   tasks: import('../domain/types').Task[];
   completions: import('../domain/types').TaskCompletion[];
   swaps: { id: string; tenantId: string; assignmentId: string; offeredBy: string; status: import('../domain/types').SwapStatus; chosenMemberId: string | null; applicantIds: string[]; expiresAt: string | null; createdAt: string }[];
@@ -92,6 +95,28 @@ export function seed(now: number = Date.now()): DB {
       { id: 'tk-terrasse', tenantId: T, title: 'Terrassenmöbel abdecken', description: null, kind: 'standard', assignmentId: null, shiftTypeIds: ['st-spaet'], weekdays: null, priority: 0, deletedAt: '2026-10-01T00:00:00Z', completionCount: 0 },
     ],
     completions: [],
+    quickFolders: [{ id: 'qf-reinigung', tenantId: T, name: 'Reinigung', pair: 'moos', sort: 2 }],
+    quickActions: [
+      { id: 'qa-kuehl', tenantId: T, folderId: null, name: 'Kühlung', icon: 'thermometer', pair: 'orange', sort: 1, archivedAt: null,
+        reminderTimes: ['08:00', '16:00'],
+        fields: [
+          { key: 'k1', label: 'Kühlhaus 1', type: 'number', unit: '°C', min: 0, max: 7, required: true },
+          { key: 'k2', label: 'Kühlvitrine', type: 'number', unit: '°C', min: 0, max: 7, required: true },
+          { key: 'tk', label: 'Tiefkühler', type: 'number', unit: '°C', min: -25, max: -18, required: true },
+          { key: 'notiz', label: 'Bemerkung', type: 'text' },
+        ] },
+      { id: 'qa-inventur', tenantId: T, folderId: null, name: 'Inventur Getränke', icon: 'package', pair: 'lavender', sort: 3, archivedAt: null,
+        reminderTimes: [],
+        fields: [
+          { key: 'wasser', label: 'Wasser 0,75 l', type: 'number', unit: 'Fl.', min: 0 },
+          { key: 'saft', label: 'Apfelschorle', type: 'number', unit: 'Fl.', min: 0 },
+        ] },
+      { id: 'qa-theke', tenantId: T, folderId: 'qf-reinigung', name: 'Theke desinfiziert', icon: 'sparkles', pair: 'moos', sort: 1, archivedAt: null,
+        reminderTimes: [], fields: [{ key: 'ok', label: 'Erledigt', type: 'check', required: true }] },
+      { id: 'qa-boden', tenantId: T, folderId: 'qf-reinigung', name: 'Boden gewischt', icon: 'droplets', pair: 'moos', sort: 2, archivedAt: null,
+        reminderTimes: [], fields: [{ key: 'ok', label: 'Erledigt', type: 'check', required: true }] },
+    ],
+    quickEntries: [],
     // Lena bietet ihre Spätschicht am Donnerstag dieser Woche zum Tausch an.
     swaps: [{ id: 'sw-lena', tenantId: T, assignmentId: `a-s-st-spaet-${addDays(week, 3)}-m-lena`, offeredBy: 'm-lena', status: 'open', chosenMemberId: null, applicantIds: [], expiresAt: null, createdAt: new Date(now - 3_600_000).toISOString() }],
   };

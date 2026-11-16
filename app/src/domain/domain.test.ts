@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { checkAssignment } from './rules.ts';
 import { tasksForShift } from './tasks.ts';
+import { checkEntry, dueSince } from './quick.ts';
 import { addDays, formatRange, parseGermanDate, workdaysBetween, hoursBetween, isoWeekday, localDate, localTime, shiftBounds, startOfWeek, zonedToUtc } from './time.ts';
 import type { Assignment, Member, Tenant } from './types.ts';
 
@@ -101,4 +102,27 @@ test('Aufgaben pro Schicht: Typ, Wochentag, Sonderaufgabe, gelöscht, Reihenfolg
   const monday = { id: 's2', shiftTypeId: 'spaet', date: '2026-11-16' };
   assert.deepEqual(tasksForShift(tasks, friday, [{ id: 'as1', shiftId: 's1' }]).map((t) => t.id), ['b', 'a', 'c']);
   assert.deepEqual(tasksForShift(tasks, monday, [{ id: 'as9', shiftId: 's2' }]).map((t) => t.id), ['a']);
+});
+
+test('Schnellaktion: Pflichtfeld, Zahl, Grenzwerte, Komma', () => {
+  const fields = [
+    { key: 'k1', label: 'Kühlhaus', type: 'number' as const, min: 0, max: 7, required: true },
+    { key: 'tk', label: 'Tiefkühler', type: 'number' as const, min: -25, max: -18 },
+    { key: 'n', label: 'Notiz', type: 'text' as const },
+  ];
+  assert.deepEqual(checkEntry(fields, {}).errors, { k1: 'Pflichtfeld' });
+  assert.deepEqual(checkEntry(fields, { k1: 'warm' }).errors, { k1: 'Bitte eine Zahl eingeben.' });
+  const r = checkEntry(fields, { k1: '4,5', tk: '-12' });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.outOfRange, ['tk']);
+});
+
+test('Schnellaktion fällig nach Erinnerungszeit ohne Eintrag', () => {
+  const a = { id: 'q', reminderTimes: ['08:00', '16:00'] };
+  const at = (iso: string) => new Date(iso);
+  // 10:00 Berlin = 09:00 UTC im Winter
+  assert.equal(dueSince(a, [], TZ, at('2026-11-16T09:00:00Z')), '08:00');
+  assert.equal(dueSince(a, [{ quickActionId: 'q', recordedAt: '2026-11-16T07:30:00Z' }], TZ, at('2026-11-16T09:00:00Z')), null);
+  assert.equal(dueSince(a, [{ quickActionId: 'q', recordedAt: '2026-11-16T07:30:00Z' }], TZ, at('2026-11-16T15:30:00Z')), '16:00');
+  assert.equal(dueSince(a, [], TZ, at('2026-11-16T06:00:00Z')), null);
 });

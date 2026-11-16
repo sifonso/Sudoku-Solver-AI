@@ -2,6 +2,7 @@
 // RLS-ähnliche Rechteprüfung, Doppelbuchung als harter Fehler, Warnungen über domain/rules.
 // Wird durch die Supabase-Umsetzung ersetzt (/replica-backend).
 import { checkAssignment as runCheck } from '../domain/rules';
+import { checkEntry } from '../domain/quick';
 import { addDays, formatDate, isoWeekday, localTime, overlaps, shiftBounds, weekdayShort } from '../domain/time';
 import type { Absence } from '../domain/types';
 import type { Assignment, Member, PlanSlot, Session, Shift } from '../domain/types';
@@ -501,6 +502,60 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       const shift = db.shifts.find((x) => x.id === c.shiftId)!;
       if (c.memberId !== me(shift.tenantId).id) throw new ApiError('forbidden');
       db.completions = db.completions.filter((x) => x.id !== completionId);
+    },
+    async listQuickActions(tenantId) {
+      await wait();
+      me(tenantId);
+      return {
+        folders: db.quickFolders.filter((f) => f.tenantId === tenantId).map((f) => ({ ...f })),
+        actions: db.quickActions.filter((a) => a.tenantId === tenantId).map((a) => ({ ...a, fields: a.fields.map((f) => ({ ...f })) })),
+      };
+    },
+    async saveQuickAction(input) {
+      await wait();
+      const m = me(input.tenantId);
+      if (m.role !== 'chef' && m.role !== 'aufgaben_manager') throw new ApiError('forbidden');
+      const existing = input.id ? db.quickActions.find((a) => a.id === input.id) : undefined;
+      const a = { ...(existing ?? { archivedAt: null }), ...input, id: input.id ?? uid() } as import('../domain/types').QuickAction;
+      if (existing) Object.assign(existing, a); else db.quickActions.push(a);
+      return { ...a };
+    },
+    async archiveQuickAction(id) {
+      await wait();
+      const a = db.quickActions.find((x) => x.id === id);
+      if (!a) throw new ApiError('not_found');
+      const m = me(a.tenantId);
+      if (m.role !== 'chef' && m.role !== 'aufgaben_manager') throw new ApiError('forbidden');
+      a.archivedAt = new Date().toISOString();
+    },
+    async saveFolder(input) {
+      await wait();
+      const m = me(input.tenantId);
+      if (m.role !== 'chef' && m.role !== 'aufgaben_manager') throw new ApiError('forbidden');
+      const existing = input.id ? db.quickFolders.find((f) => f.id === input.id) : undefined;
+      const f = { ...input, id: input.id ?? uid() };
+      if (existing) Object.assign(existing, f); else db.quickFolders.push(f);
+      return { ...f };
+    },
+    async listEntries(tenantId, since, quickActionId) {
+      await wait();
+      me(tenantId);
+      const ids = new Set(db.quickActions.filter((a) => a.tenantId === tenantId).map((a) => a.id));
+      return db.quickEntries
+        .filter((e) => ids.has(e.quickActionId) && e.recordedAt >= since && (!quickActionId || e.quickActionId === quickActionId))
+        .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+    },
+    async addEntry(tenantId, quickActionId, values) {
+      await wait();
+      const m = me(tenantId);
+      const a = db.quickActions.find((x) => x.id === quickActionId && x.tenantId === tenantId);
+      if (!a || a.archivedAt) throw new ApiError('not_found');
+      // Trigger quick_entry_check
+      const r = checkEntry(a.fields, values);
+      if (!r.ok) throw new ApiError('invalid_entry');
+      const e = { id: uid(), quickActionId, memberId: m.id, values: { ...values }, outOfRange: r.outOfRange.length > 0, recordedAt: new Date().toISOString() };
+      db.quickEntries.push(e);
+      return { ...e };
     },
     async markNotificationsRead(ids) {
       const s = requireSession();

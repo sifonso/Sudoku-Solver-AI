@@ -2,7 +2,7 @@
 // Supabase-Umsetzung erfüllen dieselbe Signatur, Screens merken den Tausch nicht.
 // Namen folgen den RPCs/Tabellen aus replica/architecture.md.
 import type {
-  Absence, VacationBlock, SwapView, Task, TaskCompletion, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, Task, TaskCompletion, QuickAction, QuickEntry, QuickFolder, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 
 export class ApiError extends Error {
@@ -28,7 +28,8 @@ export type ApiErrorCode =
   | 'vacation_blocked'
   | 'already_decided'
   | 'swap_not_open'
-  | 'not_an_applicant';
+  | 'not_an_applicant'
+  | 'invalid_entry';
 
 export interface Membership {
   tenant: Tenant;
@@ -104,6 +105,14 @@ export interface Api {
   completeTask(taskId: string, shiftId: string): Promise<void>;
   uncompleteTask(completionId: string): Promise<void>;
 
+  // Schnellaktionen (Tabellen quick_action_folders, quick_actions, quick_action_entries; Prüfung per Trigger)
+  listQuickActions(tenantId: string): Promise<{ folders: QuickFolder[]; actions: QuickAction[] }>;
+  saveQuickAction(input: Omit<QuickAction, 'id' | 'archivedAt'> & { id?: string }): Promise<QuickAction>;
+  archiveQuickAction(id: string): Promise<void>;
+  saveFolder(input: Omit<QuickFolder, 'id'> & { id?: string }): Promise<QuickFolder>;
+  listEntries(tenantId: string, since: string, quickActionId?: string): Promise<QuickEntry[]>;
+  addEntry(tenantId: string, quickActionId: string, values: Record<string, string>): Promise<QuickEntry>;
+
   // Benachrichtigungen
   listNotifications(tenantId: string): Promise<AppNotification[]>;
   markNotificationsRead(ids: string[]): Promise<void>;
@@ -157,3 +166,8 @@ export const newId = () =>
     const r = (Math.random() * 16) | 0;
     return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
   });
+
+/** Farbpaar <-> gespeicherte Farbe (Spalte color, Hex aus der Palette). */
+export const PAIR_HEX = { lavender: '#C0C3F0', orange: '#E6732C', burgundy: '#5A253E', moos: '#003332' } as const;
+export const pairOfHex = (hex: string | null | undefined): import('../domain/types').QuickPair =>
+  (Object.entries(PAIR_HEX).find(([, h]) => h.toLowerCase() === (hex ?? '').toLowerCase())?.[0] as import('../domain/types').QuickPair) ?? 'lavender';

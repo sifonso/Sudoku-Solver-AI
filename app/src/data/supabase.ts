@@ -6,9 +6,9 @@ import { createClient, processLock, type PostgrestError } from '@supabase/supaba
 import { AppState, Platform } from 'react-native';
 import { addDays, isoWeekday, shiftBounds } from '../domain/time';
 import type {
-  Absence, VacationBlock, SwapView, Task, TaskCompletion, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, Task, TaskCompletion, QuickAction, QuickEntry, QuickFolder, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
-import { ApiError, newId, type Api, type Membership, type MyShift, type PendingSignup } from './api';
+import { ApiError, PAIR_HEX, newId, pairOfHex, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { DEFAULT_SHIFT_TYPES } from './defaults';
 
 type Row = Record<string, any>;
@@ -53,6 +53,16 @@ const toTask = (r: Row): Task => ({
   completionCount: r.task_completions?.[0]?.count ?? 0,
 });
 const toCompletion = (r: Row): TaskCompletion => ({ id: r.id, taskId: r.task_id, shiftId: r.shift_id, memberId: r.member_id, completedAt: r.completed_at });
+const toFolder = (r: Row): QuickFolder => ({ id: r.id, tenantId: r.tenant_id, name: r.name, pair: pairOfHex(r.color), sort: r.sort });
+const toQuickAction = (r: Row): QuickAction => ({
+  id: r.id, tenantId: r.tenant_id, folderId: r.folder_id ?? null, name: r.name, icon: (r.icon ?? 'clipboard') as QuickAction['icon'],
+  pair: pairOfHex(r.color), fields: (r.fields ?? []) as QuickAction['fields'],
+  reminderTimes: ((r.reminder_times ?? []) as string[]).map(hhmm), sort: r.sort, archivedAt: r.archived_at ?? null,
+});
+const toEntry = (r: Row): QuickEntry => ({
+  id: r.id, quickActionId: r.quick_action_id, memberId: r.member_id, values: r.values ?? {}, outOfRange: !!r.out_of_range,
+  recordedAt: new Date(r.recorded_at).toISOString(),
+});
 const toNotification = (r: Row): AppNotification => ({
   id: r.id, tenantId: r.tenant_id, memberId: r.member_id, type: r.type, title: r.title, body: r.body,
   data: r.data ?? {}, readAt: r.read_at, createdAt: r.created_at,
@@ -83,6 +93,7 @@ function fail(e: PostgrestError | { message?: string; code?: string; status?: nu
   if (msg.includes('already_decided')) throw new ApiError('already_decided');
   if (msg.includes('swap_not_open') || (code === '23505' && msg.includes('swap_one_active'))) throw new ApiError('swap_not_open');
   if (msg.includes('not_an_applicant')) throw new ApiError('not_an_applicant');
+  if (msg.includes('missing_field') || msg.includes('invalid_number')) throw new ApiError('invalid_entry');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
   throw new ApiError('network', msg || code || 'unbekannter Fehler');
 }
@@ -421,6 +432,49 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
     async uncompleteTask(completionId) {
       await q(sb.from('task_completions').delete().eq('id', completionId));
+    },
+    async listQuickActions(tenantId) {
+      const [folders, actions] = await Promise.all([
+        q(sb.from('quick_action_folders').select('*').eq('tenant_id', tenantId).order('sort')),
+        q(sb.from('quick_actions').select('*').eq('tenant_id', tenantId).order('sort')),
+      ]);
+      return { folders: (folders as Row[]).map(toFolder), actions: (actions as Row[]).map(toQuickAction) };
+    },
+    async saveQuickAction(input) {
+      const row: Row = {
+        tenant_id: input.tenantId, folder_id: input.folderId, name: input.name, icon: input.icon, color: PAIR_HEX[input.pair],
+        fields: input.fields, reminder_times: input.reminderTimes, sort: input.sort,
+      };
+      const r = input.id
+        ? await q(sb.from('quick_actions').update(row).eq('id', input.id).select('*').single())
+        : await q(sb.from('quick_actions').insert(row).select('*').single());
+      return toQuickAction(r as Row);
+    },
+    async archiveQuickAction(id) {
+      const r = await q(sb.from('quick_actions').update({ archived_at: new Date().toISOString() }).eq('id', id).select('id'));
+      if (!(r as Row[]).length) throw new ApiError('forbidden');
+    },
+    async saveFolder(input) {
+      const row: Row = { tenant_id: input.tenantId, name: input.name, color: PAIR_HEX[input.pair], sort: input.sort };
+      const r = input.id
+        ? await q(sb.from('quick_action_folders').update(row).eq('id', input.id).select('*').single())
+        : await q(sb.from('quick_action_folders').insert(row).select('*').single());
+      return toFolder(r as Row);
+    },
+    async listEntries(tenantId, since, quickActionId) {
+      let query = sb.from('quick_action_entries').select('*').eq('tenant_id', tenantId).gte('recorded_at', since)
+        .order('recorded_at', { ascending: false }).limit(500);
+      if (quickActionId) query = query.eq('quick_action_id', quickActionId);
+      return ((await q(query)) as Row[]).map(toEntry);
+    },
+    async addEntry(tenantId, quickActionId, values) {
+      const meId = await myMember(tenantId);
+      // id vom Gerät: doppelter Upload (offline, Doppelklick) landet nur einmal
+      const r = await q(sb.from('quick_action_entries').upsert({
+        id: newId(), tenant_id: tenantId, quick_action_id: quickActionId, member_id: meId, values,
+        recorded_at: new Date().toISOString(),
+      }, { onConflict: 'id', ignoreDuplicates: true }).select('*').single());
+      return toEntry(r as Row);
     },
     async markNotificationsRead(ids) {
       if (!ids.length) return;

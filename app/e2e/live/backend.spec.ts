@@ -192,6 +192,30 @@ test('LIVE-05d Schichttausch: anbieten, melden, wählen, freigeben', async () =>
   expect((await u.C.c.from('swap_requests').select('*')).data).toEqual([]);
 });
 
+test('LIVE-05f Schnellaktionen: Server bestimmt Abweichung, Pflichtfelder, Rechte', async () => {
+  const qa = await u.A.c.from('quick_actions').insert({
+    tenant_id: tenantId, name: 'Kühlung', icon: 'thermometer', color: '#E6732C',
+    fields: [{ key: 'k1', label: 'Kühlhaus', type: 'number', unit: '°C', min: 0, max: 7, required: true }],
+  }).select('id').single();
+  expect(qa.error).toBeNull();
+  expect((await u.B.c.from('quick_actions').insert({ tenant_id: tenantId, name: 'X' })).error?.code).toBe('42501');
+  const entry = (values: Record<string, string>, oor = false) => u.B.c.from('quick_action_entries').insert({
+    id: crypto.randomUUID(), tenant_id: tenantId, quick_action_id: qa.data!.id, member_id: memberB, values, out_of_range: oor,
+    recorded_at: new Date().toISOString(),
+  }).select('out_of_range').single();
+  expect((await entry({ k1: '4,5' }, true)).data?.out_of_range).toBe(false);
+  expect((await entry({ k1: '9' }, false)).data?.out_of_range).toBe(true);
+  expect((await entry({})).error?.message).toContain('missing_field');
+  expect((await entry({ k1: 'warm' })).error?.message).toContain('invalid_number');
+  const asOther = await u.B.c.from('quick_action_entries').insert({
+    id: crypto.randomUUID(), tenant_id: tenantId, quick_action_id: qa.data!.id,
+    member_id: (await u.A.c.from('members').select('id').eq('user_id', u.A.id).single()).data!.id,
+    values: { k1: '3' }, recorded_at: new Date().toISOString(),
+  });
+  expect(asOther.error?.code).toBe('42501');
+  expect((await u.C.c.from('quick_action_entries').select('*')).data).toEqual([]);
+});
+
 test('LIVE-06 Fremde Person sieht nichts', async () => {
   for (const tb of ['tenants', 'members', 'shifts', 'assignments', 'notifications', 'invitations', 'member_contacts', 'absences']) {
     const r = await u.C.c.from(tb).select('*');

@@ -26,7 +26,7 @@ export function ActionTile({ title, subtitle, icon: Icon, pair, pattern, due, on
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title}, ${subtitle}${due ? ', fällig' : ''}`}
+      // Kein eigenes Label: Name = sichtbarer Inhalt (Titel, Untertitel, "Fällig"), WCAG 2.5.3 (BUG-010)
       onPress={onPress}
       style={({ pressed }) => [styles.tile, { backgroundColor: c[p.bg], opacity: pressed ? 0.85 : 1 }]}
     >

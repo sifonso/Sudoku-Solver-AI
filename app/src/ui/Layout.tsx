@@ -92,8 +92,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' },
   headerText: { gap: 4, flexShrink: 1 },
   section: { paddingTop: 24, paddingBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, minHeight: 64, borderBottomWidth: StyleSheet.hairlineWidth },
-  rowText: { flex: 1, gap: 2 },
+  // Umbruch statt Quetschen: der Text behält eine Mindestbreite, Aktionen rutschen notfalls in die nächste Zeile (BUG-012)
+  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingVertical: 12, minHeight: 64, borderBottomWidth: StyleSheet.hairlineWidth },
+  rowText: { flexGrow: 1, flexShrink: 1, flexBasis: 160, minWidth: 140, gap: 2 },
   semibold: { fontFamily: 'Inter_600SemiBold' },
   empty: { alignItems: 'center', gap: 8, paddingVertical: 32, paddingHorizontal: 24 },
   emptyIcon: { width: 56, height: 56, borderRadius: tokens.radius.lg, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },

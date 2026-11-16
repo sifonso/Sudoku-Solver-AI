@@ -30,7 +30,12 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-D
 | S13 Aufgaben | 2026-11-16 | fertig | Aufgaben-Log S15 | – |
 | S14 Aufgabe anlegen | 2026-11-16 | fertig | Fälligkeitszeit | Mehrfachauswahl brauchte role group (BUG-009) |
 | S21 (Aufgaben) | 2026-11-16 | Checkliste fertig | Offline-Abhaken | Karte war für Screenreader ein einziges Element; Checkboxen wären auf iOS/Android nicht einzeln erreichbar gewesen |
-| S06, S11, S12, S15–S20, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
+| S16 Schnellaktionen | 2026-11-16 | fertig | Push-Erinnerung | Ordner zählte 0 Aktionen (BUG-011) |
+| S17 Eintragen | 2026-11-16 | fertig | Export | `out_of_range` kam vom Gerät; jetzt bestimmt der Server per Trigger |
+| S18 Ordner | 2026-11-16 | fertig | – | – |
+| S19 Verwalten | 2026-11-16 | fertig | Sortieren per Ziehen | Titel in Listenzeilen gequetscht (BUG-012) |
+| S20 Heute | 2026-11-16 | fertig | – | – |
+| S06, S11, S12, S15, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
 
 ## Technik, die nicht offensichtlich war
 
