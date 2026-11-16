@@ -70,7 +70,8 @@ function Gallery() {
         <Block title="Muster">
           <View style={styles.swatches}>
             {(['zacken', 'streifen', 'pfeile'] as const).map((k, i) => {
-              const pal = [[tokens.palette.darkBlue, tokens.palette.lavender], [tokens.palette.orange, tokens.palette.beige], [tokens.palette.moos, tokens.palette.mint]][i];
+              const pals: [string, string][] = [[tokens.palette.darkBlue, tokens.palette.lavender], [tokens.palette.orange, tokens.palette.beige], [tokens.palette.moos, tokens.palette.mint]];
+              const pal = pals[i]!;
               return (
                 <View key={k} style={styles.patternBox}>
                   <Pattern kind={k} fg={pal[0]} bg={pal[1]} tile={22} />

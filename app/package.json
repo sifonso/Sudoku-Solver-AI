@@ -6,6 +6,7 @@
     "@expo-google-fonts/barlow-semi-condensed": "^0.4.1",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/metro-runtime": "~58.0.17",
+    "@tanstack/react-query": "^5.107.1",
     "expo": "~58.0.25",
     "expo-constants": "~58.0.16",
     "expo-font": "~58.0.12",
@@ -22,6 +23,7 @@
     "react-native-web": "~0.21.4"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   },
@@ -30,9 +32,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "node --stack-size=8000 node_modules/typescript/bin/tsc --noEmit",
+    "typecheck": "sh -c 'ulimit -s 65532 2>/dev/null; node --stack-size=60000 node_modules/typescript/bin/tsc --noEmit'",
     "tokens": "python3 ../replica/design/build_tokens.py",
-    "export:web": "expo export -p web"
+    "export:web": "expo export -p web",
+    "test:domain": "node --experimental-strip-types --no-warnings --test src/domain/domain.test.ts"
   },
   "private": true
 }

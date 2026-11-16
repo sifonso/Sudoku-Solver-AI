@@ -81,6 +81,14 @@ export function SheetContent({ title, items, onClose }: { title: string; items: 
   );
 }
 
+/** Platzhalter beim Laden. Ruhige Fläche ohne Animation. */
+export function Skeleton({ height = 16, width = '100%', radius = tokens.radius.md }: {
+  height?: number; width?: number | `${number}%`; radius?: number;
+}) {
+  const { c } = useTheme();
+  return <View accessibilityElementsHidden importantForAccessibility="no" style={{ height, width, borderRadius: radius, backgroundColor: c.surface }} />;
+}
+
 const styles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: 12, borderRadius: tokens.radius.md, borderWidth: 1 },
   bannerText: { flex: 1, gap: 2 },

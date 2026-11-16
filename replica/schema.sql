@@ -594,6 +594,42 @@ end $$;
 create trigger assignments_defaults before insert on assignments
   for each row execute function assignment_defaults();
 
+-- Mitteilung an den Mitarbeiter, wenn er eingeteilt oder ausgetragen wird
+-- (löst über den Database Webhook den Push aus). Nicht, wenn er es selbst war.
+-- Text bewusst ohne Gesundheits- oder Abwesenheitsbezug.
+create or replace function notify_assignment_change() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  a assignments := coalesce(new, old);
+  s shifts;
+  st_name text;
+  tz text;
+  v_actor uuid;
+begin
+  select * into s from shifts where id = a.shift_id;
+  if s.id is null then
+    return null;  -- Schicht wurde mitgelöscht (cascade)
+  end if;
+  select name into st_name from shift_types where id = s.shift_type_id;
+  select timezone into tz from tenants where id = a.tenant_id;
+  v_actor := my_member_id(a.tenant_id);
+  if v_actor is not null and v_actor = a.member_id then
+    return null;
+  end if;
+  insert into notifications (tenant_id, member_id, type, title, body, data)
+  values (
+    a.tenant_id, a.member_id,
+    case when tg_op = 'INSERT' then 'shift_assigned' else 'shift_removed' end,
+    case when tg_op = 'INSERT' then 'Neue Schicht' else 'Schicht entfällt' end,
+    coalesce(st_name, s.name) || ' am ' || to_char(s.date, 'DD.MM.YYYY') || ', '
+      || to_char(a.start_at at time zone tz, 'HH24:MI') || '–' || to_char(a.end_at at time zone tz, 'HH24:MI'),
+    jsonb_build_object('shift_id', s.id, 'date', s.date)
+  );
+  return null;
+end $$;
+create trigger assignments_notify after insert or delete on assignments
+  for each row execute function notify_assignment_change();
+
 -- ---------------------------------------------------------------------------
 -- RPCs
 -- ---------------------------------------------------------------------------

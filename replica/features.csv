@@ -1,37 +1,37 @@
 feature,area,priority,original,clone,notes
-Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,no,S01; nativ: Workspace-Lookup per E-Mail statt Subdomain-Eingabe
-14 Tage Trial ohne Kreditkarte,onboarding,must,yes,no,Startseite; AGB § 3
-Login per E-Mail und Passwort,auth,must,yes,no,abgeleitet
+Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"S01 fertig, Firmenadresse aus Name; Fake-Datenschicht; echt mit /replica-backend"
+14 Tage Trial ohne Kreditkarte,onboarding,must,yes,partial,Restlaufzeit unter Mehr sichtbar; Ablauf-Job fehlt
+Login per E-Mail und Passwort,auth,must,yes,partial,S02 fertig inkl. Fehlerzustand und Tastatur; Fake-Datenschicht; echt mit /replica-backend
 Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
-Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,no,rollen-rechte
-Mitarbeiter sehen nur eigene Details,rollen,must,yes,no,FAQ Rollen
+Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,partial,Reiter und Rechte je Rolle; Rollenwechsel in S08 fehlt
+Mitarbeiter sehen nur eigene Details,rollen,must,yes,partial,Fake-API prüft wie RLS; echte RLS getestet im Schema
 Sichtbarkeit Gesamtplan für Mitarbeiter konfigurierbar,rollen,should,yes,no,FAQ Rollen
-Schichttypen anlegen (Name Zeiten Wochentage),schichtplanung,must,yes,no,S03 Namen wie Di.-Fr. Frühschicht
-Schichten über Mitternacht,schichtplanung,must,yes,no,Nachtschicht 22:00-06:00 auf S03
-Kalender Monats- und Wochenansicht,schichtplanung,must,yes,no,S03
-Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,no,Drag-and-Drop im Original; mobil per Sheet
+Schichttypen anlegen (Name Zeiten Wochentage),schichtplanung,must,yes,partial,Standardtypen bei Registrierung; S06 noch Stub
+Schichten über Mitternacht,schichtplanung,must,yes,yes,Zeitlogik getestet inkl. Zeitumstellung (7 h / 9 h)
+Kalender Monats- und Wochenansicht,schichtplanung,must,yes,partial,Woche fertig (1–4 Spalten je Breite); Monat fehlt
+Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,partial,S05 fertig mit Warnungen und Sortierung; Fake-Datenschicht; echt mit /replica-backend
 Zuweisung: Zeiten bearbeiten,schichtplanung,must,yes,no,S04
-Zuweisung löschen,schichtplanung,must,yes,no,S04
-Konfliktprüfung Überschneidung,schichtplanung,must,yes,no,schichtplanung
-Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,no,abwesenheiten
-Qualifikationsprüfung bei Zuweisung,schichtplanung,should,yes,no,mitarbeiterverwaltung/pflege
-Ruhezeitprüfung (11 h),schichtplanung,should,yes,no,pflege
+Zuweisung löschen,schichtplanung,must,yes,partial,S04 Aktionsmenü; Fake-Datenschicht; echt mit /replica-backend
+Konfliktprüfung Überschneidung,schichtplanung,must,yes,partial,"Doppelbuchung hart abgelehnt, Warnung in S05"
+Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,partial,Warnung beim Zuweisen; Anzeige im Plan fehlt
+Qualifikationsprüfung bei Zuweisung,schichtplanung,should,yes,partial,Warnung in S05; Pflege der Qualifikationen fehlt
+Ruhezeitprüfung (11 h),schichtplanung,should,yes,partial,"Warnung in S05, Ruhezeit pro Betrieb einstellbar (Schema)"
 Schichtvorlagen für wiederkehrende Pläne,schichtplanung,should,yes,no,schichtplanung FAQ
 Sonder-/Eventschichten,schichtplanung,could,yes,no,gastronomie
-3-Schicht-Rotation automatisch,schichtplanung,could,yes,no,produktion "Automatische Rotation möglich"
+3-Schicht-Rotation automatisch,schichtplanung,could,yes,no,"produktion ""Automatische Rotation möglich"""
 Mehrere Standorte/Filialen,schichtplanung,could,yes,no,einzelhandel; nur Marketingtext
-Plan drucken / PDF-Export,export,should,yes,no,Drucken-Button S03; FAQ
+Plan drucken / PDF-Export,export,should,yes,partial,Drucken-Button nur im Web (Browserdruck)
 Plan als Excel exportieren,export,should,yes,no,FAQ
 Mitarbeiter anlegen/bearbeiten,personal,must,yes,no,S07/S08
-Beschäftigungsart Vollzeit/Aushilfe mit Gruppierung,personal,must,yes,no,S07
+Beschäftigungsart Vollzeit/Aushilfe mit Gruppierung,personal,must,yes,partial,Farbcodierung im Plan; Gruppierung in S07 fehlt
 Mitarbeiter sperren,personal,must,yes,no,S07
 Mitarbeiter entfernen/archivieren mit Historie,personal,must,yes,no,S07; FAQ
-Kürzel und Farbe pro Mitarbeiter,personal,must,yes,no,S03/S11
-Feste Schicht pro Mitarbeiter,personal,should,yes,no,"Keine feste Schicht konfiguriert" S07
+Kürzel und Farbe pro Mitarbeiter,personal,must,yes,partial,Kürzel + Farbe nach Beschäftigungsart im Plan
+Feste Schicht pro Mitarbeiter,personal,should,yes,no,Keine feste Schicht konfiguriert S07
 Qualifikationen verwalten,personal,should,yes,no,mitarbeiterverwaltung
 Verfügbarkeiten (Self-Service),personal,should,yes,no,mitarbeiterverwaltung/einzelhandel
 Arbeitszeitmodelle und Stundenkontingente,personal,should,yes,no,mitarbeiterverwaltung
-Minijob-Stundenwarnung,personal,could,yes,no,einzelhandel
+Minijob-Stundenwarnung,personal,could,yes,partial,Warnung bei Monatsgrenze in S05
 Überstunden-Übersicht,personal,could,yes,no,produktion
 Urlaub beantragen,abwesenheiten,must,yes,no,abwesenheiten
 Urlaub genehmigen/ablehnen,abwesenheiten,must,yes,no,abwesenheiten
@@ -59,7 +59,7 @@ Protokoll-Export für Audits,schnellaktionen,should,yes,no,schnellaktionen
 Heute: wer arbeitet heute,schnellaktionen,should,yes,no,S16
 Übergabe-Protokoll pro Schicht,schichtplanung,could,yes,no,pflege/produktion
 Push-Benachrichtigungen (APNs/FCM),benachrichtigungen,must,yes,no,Original nur Web-Push via PWA
-In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,no,Glocke im Header
+In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,partial,S25 + Glocke mit Zähler; Trigger im Schema ergänzt
 Benachrichtigungspräferenzen pro Nutzer und Admin-Default,benachrichtigungen,should,yes,no,benachrichtigungen
 E-Mail-Benachrichtigungen,benachrichtigungen,should,yes,no,benachrichtigungen
 Statistik Schichten und Stunden pro Mitarbeiter und Monat,statistiken,must,yes,no,S11

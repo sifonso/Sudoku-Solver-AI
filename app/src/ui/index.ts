@@ -7,4 +7,4 @@ export { Card, PageHeader, SectionHeader, ListRow, EmptyState } from './Layout';
 export { SegmentedControl, Tabs } from './Navigation';
 export { DayCard, ShiftBlock } from './Plan';
 export { ActionTile, type TilePair } from './Tiles';
-export { Banner, ActionSheet, SheetContent, type MenuItem } from './Feedback';
+export { Banner, ActionSheet, SheetContent, Skeleton, type MenuItem } from './Feedback';

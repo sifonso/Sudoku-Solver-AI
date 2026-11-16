@@ -1,6 +1,10 @@
 import { Redirect } from 'expo-router';
+import { canPlan } from '../data/api';
+import { useSession } from '../data/session';
 
-// Bis die echten Screens stehen (/replica-build), startet die App auf der Design-Seite.
+/** Einstieg: ohne Login zur Anmeldung, Planer zum Plan, alle anderen zu ihren Schichten. */
 export default function Index() {
-  return <Redirect href="/design" />;
+  const { session, member } = useSession();
+  if (!session || !member) return <Redirect href="/login" />;
+  return <Redirect href={canPlan(member.role) ? '/plan' : '/meine'} />;
 }
