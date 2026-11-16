@@ -10,7 +10,7 @@ Da kein bestehender Stack vorgegeben war, nehme ich durchgehend verwaltete Diens
 | layer | choice | why |
 | --- | --- | --- |
 | App (iOS, Android, Web) | Expo (React Native) + TypeScript + Expo Router | Eine Codebasis für beide Stores und eine Web-Version, in der der Chef am Desktop plant. |
-| Styling | NativeWind mit Tokens aus `/replica-design` | Tailwind-Klassen funktionieren in React Native und im Web gleich. |
+| Styling | React-Native-StyleSheet mit Tokens aus `replica/design/tokens.json` (generiert nach `app/src/theme/tokens.ts`) | Ohne Babel-/Metro-Erweiterung wie bei NativeWind. Komponenten nutzen nur Rollen, nie Hex-Werte. |
 | Server-State + Offline | TanStack Query, Cache persistiert in MMKV, pausierte Mutationen als Warteschlange | Der Plan ist offline lesbar. Abhaken und Messwerte werden offline gesammelt und später hochgeladen. Eine eigene Sync-Engine ist dafür nicht nötig. |
 | Datenbank | Postgres auf Supabase, Region Frankfurt (eu-central-1) | Das Original wirbt mit „Daten in Deutschland“. RLS, Realtime und Cron laufen in derselben Datenbank. |
 | Zugriffsregeln | Row Level Security auf allen Tabellen, Geschäftsregeln in `security definer`-Funktionen | Clients sprechen direkt mit der Datenbank (PostgREST). Die Regeln stehen an genau einer Stelle. |
@@ -23,7 +23,7 @@ Da kein bestehender Stack vorgegeben war, nehme ich durchgehend verwaltete Diens
 | Export | expo-print (PDF), SheetJS (xlsx), expo-sharing; alles auf dem Gerät | Für PDF-Aushang und Excel-Statistik braucht es keinen Server. |
 | Dateien | Supabase Storage | Für Firmenlogo (Branding) und spätere Anhänge. |
 | Build + Release | EAS Build, EAS Submit, EAS Update | Store-Builds ohne eigenen Mac-CI-Runner. JS-Fixes gehen ohne neues Review raus. |
-| Web-Hosting | Statischer Expo-Web-Export auf Vercel oder Cloudflare Pages | Die Web-Version braucht keinen eigenen Server. |
+| Web-Hosting | Expo-Web-Export als Single-Page-App auf Vercel oder Cloudflare Pages | Die Web-Version braucht keinen eigenen Server. Statisches Vorrendern ist abgeschaltet, weil es Theme und Fensterbreite falsch hydriert. |
 | Fehler-Monitoring | Sentry (@sentry/react-native) | Abstürze und JS-Fehler in allen drei Targets. |
 
 Die Marketing-Website gehört nicht in diesen Plan. Sie kommt mit `/replica-launch`.
