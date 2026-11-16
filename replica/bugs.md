@@ -145,7 +145,7 @@ Status: fixed in 7150980 (`role="group"`, `src/ui/Navigation.tsx`)
 - Screen: S16, S18
 
 Actual: Label „Reinigung, 2 Aktionen“, sichtbar zusätzlich „Fällig“; axe `label-content-name-mismatch` (5 Treffer).
-Status: fixed in QUICKFIX (Name aus dem Inhalt, `src/ui/Tiles.tsx`)
+Status: fixed in 10d1f19 (Name aus dem Inhalt, `src/ui/Tiles.tsx`)
 
 ### BUG-011: Ordner-Kachel zählt 0 Aktionen und wird nie fällig
 
@@ -159,7 +159,7 @@ Steps
 Expected: „Reinigung 2 Aktionen“.
 Actual: „Reinigung 0 Aktionen“. Die Startseite gab nur Aktionen ohne Ordner ins Raster, das daraus auch den Ordnerinhalt zählte. Fällige Aktionen im Ordner hätten die Kachel nie markiert.
 Evidence: Accessibility-Snapshot `button "Reinigung 0 Aktionen"`.
-Status: fixed in QUICKFIX (`src/features/QuickGrid.tsx`)
+Status: fixed in 10d1f19 (`src/features/QuickGrid.tsx`)
 
 ### BUG-012: Listenzeilen quetschen den Titel auf Buchstabenbreite
 
@@ -170,7 +170,7 @@ Status: fixed in QUICKFIX (`src/features/QuickGrid.tsx`)
 Expected: Titel lesbar, Aktionen notfalls in der nächsten Zeile.
 Actual: Titel „Kühlung“ stand senkrecht, ein Buchstabe pro Zeile.
 Evidence: Screenshot zu F09-H4 (Telefon).
-Status: fixed in QUICKFIX (Mindestbreite und Umbruch in `ListRow`; Icon-Knöpfe in S19); Test prüft Titelbreite
+Status: fixed in 10d1f19 (Mindestbreite und Umbruch in `ListRow`; Icon-Knöpfe in S19); Test prüft Titelbreite
 
 ## Zu prüfen (nicht reproduziert)
 
