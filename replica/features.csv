@@ -1,18 +1,18 @@
 feature,area,priority,original,clone,notes
-Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"S01 mit E-Mail-Bestätigung, Firma entsteht beim ersten Login; live gegen Supabase getestet"
+Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,S01 mit E-Mail-Bestätigung; eigener Mailversand (SMTP) fehlt noch
 14 Tage Trial ohne Kreditkarte,onboarding,must,yes,partial,Restlaufzeit unter Mehr sichtbar; Ablauf-Job fehlt
-Login per E-Mail und Passwort,auth,must,yes,partial,S02 fertig inkl. Fehlerzustand und Tastatur; Supabase angebunden
+Login per E-Mail und Passwort,auth,must,yes,partial,"S02 gegen Supabase; ""Passwort vergessen"" fehlt"
 Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
 Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,yes,Rolle in S08; DB hält immer einen aktiven Chef (Trigger keep_one_chef)
-Mitarbeiter sehen nur eigene Details,rollen,must,yes,partial,Fake-API prüft wie RLS; echte RLS getestet im Schema
+Mitarbeiter sehen nur eigene Details,rollen,must,yes,yes,"RLS; Kontaktdaten/Abwesenheiten nur eigene, live getestet"
 Sichtbarkeit Gesamtplan für Mitarbeiter konfigurierbar,rollen,should,yes,no,FAQ Rollen
 Schichttypen anlegen (Name Zeiten Wochentage),schichtplanung,must,yes,partial,Standardtypen bei Registrierung; S06 noch Stub
 Schichten über Mitternacht,schichtplanung,must,yes,yes,Zeitlogik getestet inkl. Zeitumstellung (7 h / 9 h)
 Kalender Monats- und Wochenansicht,schichtplanung,must,yes,partial,Woche fertig (1–4 Spalten je Breite); Monat fehlt
-Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,partial,S05 fertig mit Warnungen und Sortierung; Supabase angebunden
+Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,yes,S05 mit Hinweisen; live gegen Supabase getestet (LIVE-04)
 Zuweisung: Zeiten bearbeiten,schichtplanung,must,yes,no,S04
-Zuweisung löschen,schichtplanung,must,yes,partial,S04 Aktionsmenü; Supabase angebunden
-Konfliktprüfung Überschneidung,schichtplanung,must,yes,partial,"Doppelbuchung hart abgelehnt, Warnung in S05"
+Zuweisung löschen,schichtplanung,must,yes,yes,S04; Mitteilung an die Person per Trigger
+Konfliktprüfung Überschneidung,schichtplanung,must,yes,yes,"DB-Exclusion-Constraint, live getestet (23P01); Hinweis in S05"
 Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,yes,"Abwesend-Zeile pro Tag im Plan, Hinweis beim Zuweisen"
 Qualifikationsprüfung bei Zuweisung,schichtplanung,should,yes,partial,Warnung in S05; Pflege der Qualifikationen fehlt
 Ruhezeitprüfung (11 h),schichtplanung,should,yes,partial,"Warnung in S05, Ruhezeit pro Betrieb einstellbar (Schema)"
@@ -59,7 +59,7 @@ Protokoll-Export für Audits,schnellaktionen,should,yes,partial,Verlauf 7 Tage i
 Heute: wer arbeitet heute,schnellaktionen,should,yes,yes,S20
 Übergabe-Protokoll pro Schicht,schichtplanung,could,yes,no,pflege/produktion
 Push-Benachrichtigungen (APNs/FCM),benachrichtigungen,must,yes,partial,Registrierung + send-push gebaut; aktiv nach EAS-Projekt und Webhook
-In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,partial,S25 + Glocke mit Zähler; Trigger im Schema ergänzt
+In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,yes,"S25 + Glocke; Trigger für Schichten, Aufgaben, Abwesenheiten, Tausch"
 Benachrichtigungspräferenzen pro Nutzer und Admin-Default,benachrichtigungen,should,yes,no,benachrichtigungen
 E-Mail-Benachrichtigungen,benachrichtigungen,should,yes,no,benachrichtigungen
 Statistik Schichten und Stunden pro Mitarbeiter und Monat,statistiken,must,yes,yes,S11/S12; gleiche Regeln in App (domain/stats) und DB (stats_month)
