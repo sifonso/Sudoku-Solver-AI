@@ -68,7 +68,7 @@ Steps
 Expected: Antrag wird zurückgezogen.
 Actual: Knopf reagiert nicht. Die Zeile ist ein deaktivierter Pressable mit `aria-disabled`, das an den Knopf vererbt wird; Screenreader melden ihn als deaktiviert.
 Evidence: Test F05-E2 (Timeout „waiting for element to be visible, enabled and stable“).
-Status: fixed in M2-Commit „build: S22 S23 S09 S10“ (ListRow ohne Aktion ist eine einfache View, `src/ui/Layout.tsx`)
+Status: fixed in 27a6f77 (ListRow ohne Aktion ist eine einfache View, `src/ui/Layout.tsx`)
 
 ### BUG-005: Antrag im Folgejahr zeigt „0 Tage“
 
@@ -83,7 +83,7 @@ Steps
 Expected: „5 Tage“.
 Actual: „0 Tage“. Die Tagesanzeige pro Antrag schnitt auf das laufende Jahr zu.
 Evidence: Screenshot zu F05-E2, Test F05-H1 erweitert.
-Status: fixed im selben Commit (`daysOf` zählt den ganzen Antrag, `src/features/vacation.ts`)
+Status: fixed in 27a6f77 (`daysOf` zählt den ganzen Antrag, `src/features/vacation.ts`)
 
 ### BUG-006: Datumsfelder behalten nach dem Absenden ihre Werte
 
@@ -93,7 +93,7 @@ Status: fixed im selben Commit (`daysOf` zählt den ganzen Antrag, `src/features
 
 Expected: Formular ist nach erfolgreichem Absenden leer.
 Actual: Datumsfelder zeigten weiter den abgeschickten Zeitraum.
-Status: fixed im selben Commit (Felder werden neu aufgebaut)
+Status: fixed in 27a6f77 (Felder werden neu aufgebaut)
 
 ### BUG-007: Mitteilung zur Krankmeldung verrät Gesundheitsdaten im Push
 
