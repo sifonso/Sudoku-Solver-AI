@@ -136,7 +136,7 @@ Status: fixed in 52c27bf (nur die Schaltfläche in der Tab-Leiste wird ausgeblen
 Expected: Gruppe von Checkboxen mit Namen (role group).
 Actual: Container mit role list, Kinder sind checkboxes. axe meldet `aria-required-children` (critical), 2 Treffer.
 Evidence: Test A11Y-S13/S14 rot.
-Status: fixed in TASKFIX (`role="group"`, `src/ui/Navigation.tsx`)
+Status: fixed in 7150980 (`role="group"`, `src/ui/Navigation.tsx`)
 
 ## Zu prüfen (nicht reproduziert)
 
