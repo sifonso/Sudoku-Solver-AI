@@ -64,7 +64,7 @@ export default function InviteScreen() {
         <Button label="Einladung senden" icon={UserPlus} onPress={submit} loading={invite.isPending} fullWidth size="lg" />
       </Card>
       <Text variant="xs" color="textMuted">
-        In der Testphase sind bis zu 10 Personen möglich. Die Stundengrenze legst du nach dem Einladen im Profil der Person fest.
+        Die Stundengrenze legst du nach dem Einladen im Profil der Person fest.
       </Text>
     </AppScreen>
   );

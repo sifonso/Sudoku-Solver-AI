@@ -58,6 +58,9 @@ test('LIVE-02 Chef legt Betrieb an', async () => {
   const t = await u.A.c.rpc('create_tenant', { p_slug: SLUG, p_name: 'Livetest Café', p_display_name: 'Chef Live', p_initials: 'CL' });
   expect(t.error).toBeNull();
   tenantId = t.data as string;
+  // Interne Nutzung: kein Trial, kein Personenlimit
+  const plan = await u.A.c.from('tenants').select('plan, trial_ends_at').eq('id', tenantId).single();
+  expect(plan.data).toEqual({ plan: 'internal', trial_ends_at: null });
   const anon = createClient(URL!, PUB!, opts);
   expect((await anon.rpc('slug_available', { p_slug: SLUG })).data).toBe(false);
 });

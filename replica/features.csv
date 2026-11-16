@@ -1,6 +1,6 @@
 feature,area,priority,original,clone,notes
 Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,S01 mit E-Mail-Bestätigung; eigener Mailversand (SMTP) fehlt noch
-14 Tage Trial ohne Kreditkarte,onboarding,must,yes,partial,Restlaufzeit unter Mehr sichtbar; Ablauf-Job fehlt
+14 Tage Trial ohne Kreditkarte,onboarding,skip,yes,skip,"entfällt: teamintern ohne Bezahlung (Entscheidung 2026-11-16); Tarif ""internal"" ohne Limit"
 Login per E-Mail und Passwort,auth,must,yes,partial,"S02 gegen Supabase; ""Passwort vergessen"" fehlt"
 Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
 Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,yes,Rolle in S08; DB hält immer einen aktiven Chef (Trigger keep_one_chef)
@@ -66,8 +66,8 @@ Statistik Schichten und Stunden pro Mitarbeiter und Monat,statistiken,must,yes,y
 Statistik-Export Excel/PDF,statistiken,should,yes,partial,"CSV für Excel (Semikolon, BOM); PDF fehlt"
 Abwesenheits- und Aufgabenstatistik,statistiken,could,yes,partial,Krank-/Urlaubstage pro Person im Monat; Aufgaben nur Zähler in S13
 Offline lesen und später synchronisieren,mobile,must,yes,no,mobile-app; im Original nur Grundfunktionen
-Eigenes Branding (Professional),abo,could,yes,no,Preise
-Tarife mit Mitarbeiterlimit und Zusatzpreis pro MA,abo,must,yes,no,Preise; Buchung im Web nicht in der App
+Eigenes Branding (Professional),abo,could,yes,no,"ohne Tarifbindung, falls gewünscht"
+Tarife mit Mitarbeiterlimit und Zusatzpreis pro MA,abo,skip,yes,skip,entfällt: teamintern ohne Bezahlung (Entscheidung 2026-11-16)
 Datenexport für Kunden,abo,should,yes,no,AGB § 8 Abs. 4
 Name Logo Texte Screenshots des Originals,branding,skip,yes,skip,gehören dem Anbieter
 Bestandskunden und deren Daten,daten,skip,yes,skip,nur über Export des jeweiligen Kunden

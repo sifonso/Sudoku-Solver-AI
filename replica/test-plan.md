@@ -83,4 +83,4 @@ Spalte „auto“:
 | F09 HACCP-Temperatur | H: Erinnerung → Wert erfassen. E: Wert außerhalb Grenze, Export | – |
 | F10 Monatsstatistik | H: Monat wählen, Export. E: Zeitumstellung in den Stunden | – (stats_month lokal getestet) |
 | F11 Drucken | H: Tagesplan drucken | Web: Browserdruck; nativ offen |
-| Zahlung | N: Karte abgelehnt (`4000 0000 0000 0002`) | – (Stripe fehlt) |
+| Zahlung | – | entfällt (teamintern, keine Bezahlung) |

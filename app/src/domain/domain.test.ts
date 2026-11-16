@@ -42,7 +42,7 @@ test('Wochenrechnung', () => {
 });
 
 const tenant: Tenant = {
-  id: 't', slug: 't', name: 'T', timezone: TZ, plan: 'trial', trialEndsAt: '', minRestHours: 11,
+  id: 't', slug: 't', name: 'T', timezone: TZ, plan: 'internal', trialEndsAt: null, minRestHours: 11,
   swapRequiresApproval: true, employeesSeeFullPlan: true, workdays: [1, 2, 3, 4, 5],
 };
 const member: Member = {

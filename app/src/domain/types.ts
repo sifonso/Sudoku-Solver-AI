@@ -10,8 +10,8 @@ export interface Tenant {
   slug: string;
   name: string;
   timezone: string;
-  plan: 'trial' | 'basic' | 'professional' | 'enterprise';
-  trialEndsAt: string;
+  plan: 'internal' | 'trial' | 'basic' | 'professional' | 'enterprise'; // 'internal': teamintern, ohne Bezahlung
+  trialEndsAt: string | null;
   minRestHours: number;
   swapRequiresApproval: boolean;
   employeesSeeFullPlan: boolean;

@@ -5,7 +5,7 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) und Meilenstein 2 (Pflicht-Screens
 ## Gesamtstand
 
 - Screens: 23 von 29 gebaut. Als Stub mit Route offen: S06 Schichttypen, S15 Aufgaben-Log, S26 Einstellungen, S27 Profil, S28 Abo, S29 Schicht-Detail.
-- Must-haves: 26 fertig, 6 teilweise, 4 offen (von 36). Stand nach Meilenstein 2.
+- Must-haves: 26 fertig, 5 teilweise, 3 offen (von 34; Trial und Tarife entfallen, teamintern ohne Bezahlung).
 - Durchstich läuft durch: Chef meldet sich an → plant (Woche) → teilt Mira mit Warnungen ein → entfernt eine Zuweisung → Mira meldet sich an → sieht die neue Schicht und die Mitteilung. Geprüft per Playwright im Web-Build bei 390 px und 1440 px, hell und dunkel, ohne Konsolenfehler.
 - Push aufs Telefon ist noch nicht drin. Bis zum Backend erscheinen Mitteilungen in der App (Glocke, S25, Banner in S21).
 

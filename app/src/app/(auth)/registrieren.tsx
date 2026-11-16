@@ -15,7 +15,7 @@ const slugify = (s: string) =>
 const initialsOf = (name: string) =>
   name.trim().split(/\s+/).filter(Boolean).map((w) => w[0]!.toUpperCase()).join('').slice(0, 3);
 
-/** S01 Registrierung: Konto + Firma in einem Schritt, 14 Tage Testzeit. */
+/** S01 Registrierung: Konto + Betrieb in einem Schritt. Teamintern, ohne Bezahlung. */
 export default function RegisterScreen() {
   const [company, setCompany] = useState('');
   const [slug, setSlug] = useState('');
@@ -62,7 +62,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <AuthFrame eyebrow="14 Tage kostenlos testen" title="Betrieb anlegen" intro="Du wirst Chef deines Betriebs und kannst danach dein Team einladen.">
+    <AuthFrame eyebrow="Betrieb einrichten" title="Betrieb anlegen" intro="Du wirst Chef deines Betriebs und kannst danach dein Team einladen.">
       {failure ? <Banner tone="danger" title={failure} /> : null}
       <TextField label="Name des Betriebs" value={company} onChangeText={setCompany} error={show('company')} autoComplete="organization" />
       <TextField

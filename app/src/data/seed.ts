@@ -31,8 +31,8 @@ export function seed(now: number = Date.now()): DB {
   const tz = 'Europe/Berlin';
   const T = 't-morgenrot';
   const tenant: Tenant = {
-    id: T, slug: 'cafe-morgenrot', name: 'Café Morgenrot', timezone: tz, plan: 'trial',
-    trialEndsAt: new Date(now + 10 * 86_400_000).toISOString(), minRestHours: 11,
+    id: T, slug: 'cafe-morgenrot', name: 'Café Morgenrot', timezone: tz, plan: 'internal',
+    trialEndsAt: null, minRestHours: 11,
     swapRequiresApproval: true, employeesSeeFullPlan: true, workdays: [1, 2, 3, 4, 5, 6],
   };
   const q = { id: 'q-erste-hilfe', tenantId: T, name: 'Ersthelfer' };

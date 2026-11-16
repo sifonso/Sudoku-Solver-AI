@@ -2,12 +2,12 @@ import { router, type Href } from 'expo-router';
 import { ChevronRight, LogOut, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { canPlan, roleLabel } from '../../../data/api';
+import { roleLabel } from '../../../data/api';
 import { useActive, useDeleteAccount, useSignOut } from '../../../data/session';
 import type { Role } from '../../../domain/types';
 import { AppScreen } from '../../../features/AppScreen';
 import { useTheme } from '../../../theme';
-import { Avatar, Badge, Banner, Button, Card, ListRow, SectionHeader, Text } from '../../../ui';
+import { Avatar, Banner, Button, Card, ListRow, SectionHeader, Text } from '../../../ui';
 
 type Item = { label: string; href: Href; id: string; roles: Role[] | 'all' };
 const ITEMS: Item[] = [
@@ -25,7 +25,7 @@ const ITEMS: Item[] = [
   { id: 'S15', label: 'Aufgaben-Log', href: '/aufgaben-log', roles: ['chef', 'planer', 'aufgaben_manager'] },
   { id: 'S27', label: 'Profil und Verfügbarkeit', href: '/profil', roles: 'all' },
   { id: 'S26', label: 'Einstellungen', href: '/einstellungen', roles: 'all' },
-  { id: 'S28', label: 'Abo und Datenexport', href: '/abo', roles: ['chef'] },
+  { id: 'S28', label: 'Datenexport', href: '/abo', roles: ['chef'] },
 ];
 
 /** Mehr: alles, was nicht in die Reiter passt. */
@@ -36,7 +36,6 @@ export default function MoreScreen() {
   const del = useDeleteAccount();
   const [step, setStep] = useState<'idle' | 'confirm' | 'tenant'>('idle');
   const items = ITEMS.filter((i) => i.roles === 'all' || i.roles.includes(member.role));
-  const trialDays = Math.max(0, Math.ceil((Date.parse(tenant.trialEndsAt) - Date.now()) / 86_400_000));
   return (
     <AppScreen title="Mehr" eyebrow={tenant.name}>
       <Card style={styles.me}>
@@ -45,7 +44,6 @@ export default function MoreScreen() {
           <Text variant="lg">{member.displayName}</Text>
           <Text variant="sm" color="textMuted">{roleLabel[member.role]} · {tenant.name}</Text>
         </View>
-        {tenant.plan === 'trial' && canPlan(member.role) ? <Badge label={`Test: ${trialDays} Tage`} tone="highlight" /> : null}
       </Card>
       <SectionHeader title="Bereiche" />
       <Card style={styles.list}>

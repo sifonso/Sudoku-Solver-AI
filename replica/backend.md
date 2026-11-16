@@ -72,10 +72,9 @@ Zusätzlich lokal gegen Postgres 16 mit Supabase-Auth-Stub:
 | Thema | Was fehlt | Wer |
 | --- | --- | --- |
 | Push | EAS-Projekt-ID in `app.json` (`extra.eas.projectId`), dafür Expo-Account; dann Webhook (Schritt 7). Bis dahin registriert die App kein Token. | du: Expo-Account; ich: Einbau |
-| Zahlungen | Stripe Checkout, Customer Portal, Webhook `stripe-webhook` mit Signaturprüfung und `stripe_events` | du: Stripe-Konto im Testmodus; ich: Code |
 | E-Mail | Eigenes SMTP für Auth-Mails, Absender-Domain (Pflicht vor echten Nutzern, siehe oben) | du |
 | Passwort vergessen | Screen + `resetPasswordForEmail` + Deep Link | ich |
-| Jobs | `expire-swaps`, `trial-expiry`, `purge-tenants`, `quick-action-reminders` per pg_cron | ich |
+| Jobs | `expire-swaps`, `quick-action-reminders` per pg_cron | ich |
 | Generierte Typen | `supabase gen types` statt untypisierter Zeilen in `supabase.ts` | ich, nach Verbindung |
 | Rate Limits | Supabase Auth begrenzt Login und Registrierung selbst; `invite-member` noch ohne eigene Grenze | ich |
 
@@ -85,8 +84,12 @@ Zusätzlich lokal gegen Postgres 16 mit Supabase-Auth-Stub:
 - [x] Eingaben serverseitig geprüft: Check-Constraints im Schema, Validierung in `invite-member`
 - [x] Rechte bei jedem Lesen und Schreiben über RLS, mit zweitem und fremdem Nutzer getestet (lokal und live)
 - [ ] Rate Limits: Auth über Supabase; eigene Grenze für `invite-member` fehlt
-- [ ] Webhooks prüfen Signaturen: `send-push` prüft ein Geheimnis im Header; Stripe-Webhook noch nicht gebaut
+- [x] Webhooks prüfen Signaturen bzw. Geheimnis: `send-push` prüft `x-webhook-secret` (Stripe entfällt)
 - [ ] Uploads: noch keine (Logo für Branding kommt später, dann mit Größen- und Typgrenze)
 - [x] Keine Nutzerdaten in URLs; Push-Texte ohne Gesundheitsbezug
 - [ ] `npm audit`: meldet Funde in Entwicklungs-Abhängigkeiten von Expo, noch nicht ausgewertet
-- [ ] Datenschutzerklärung mit allen Auftragsverarbeitern: Supabase, Expo (Push), Apple/Google (Push-Zustellung), später Stripe und Mail-Anbieter
+- [ ] Datenschutzerklärung mit allen Auftragsverarbeitern: Supabase, Expo (Push), Apple/Google (Push-Zustellung), später der Mail-Anbieter
+
+## Entscheidung 2026-11-16: keine Bezahlfunktion
+
+Die App wird teamintern genutzt. Migration `internal_use`: Tarif `internal` als Standard, keine Testphase (`trial_ends_at` leer), kein Personenlimit. Stripe, Abo-Screen und die Jobs `trial-expiry`, `stripe-seat-sync`, `purge-tenants` entfallen. S28 ist jetzt nur noch „Datenexport“.

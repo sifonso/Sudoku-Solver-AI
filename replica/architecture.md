@@ -18,7 +18,7 @@ Da kein bestehender Stack vorgegeben war, nehme ich durchgehend verwaltete Diens
 | Push | expo-notifications + Expo Push Service → APNs / FCM | Ein Versandweg für iOS und Android. Echter iOS-Push ist der Hauptgrund für die native App. |
 | Realtime | Supabase Realtime (postgres_changes auf `assignments`, `notifications`) | Planänderungen erscheinen ohne Neuladen. Realtime beachtet RLS. |
 | Jobs | pg_cron + Supabase Edge Functions | Erinnerungen, Trial-Ablauf, Löschfristen und Push-Versand laufen ohne zusätzlichen Dienst. |
-| Zahlungen | Stripe Billing (Karte, SEPA-Lastschrift), Checkout + Customer Portal, nur im Web | Die AGB des Originals nennen Karte und SEPA. In der iOS-App gibt es keinen Kauf-Button, damit greift Apples In-App-Purchase-Pflicht nicht. |
+| Zahlungen | entfällt | Teamintern ohne Bezahlung (Entscheidung 2026-11-16). Neue Betriebe bekommen den Tarif `internal` ohne Testphase und ohne Personenlimit. |
 | E-Mail | Supabase Custom SMTP über Postmark oder Brevo | Für Auth-Mails und Benachrichtigungs-Fallback. Mit dem Anbieter ist ein AVV nötig. |
 | Export | expo-print (PDF), SheetJS (xlsx), expo-sharing; alles auf dem Gerät | Für PDF-Aushang und Excel-Statistik braucht es keinen Server. |
 | Dateien | Supabase Storage | Für Firmenlogo (Branding) und spätere Anhänge. |
@@ -121,14 +121,12 @@ Clients sprechen direkt mit PostgREST (CRUD unter RLS) und rufen Postgres-Funkti
 | PUT notification_preferences | Eigene Einstellungen | selbst | type, push, email | Zeile | — |
 | PUT device_tokens | Push-Token registrieren | selbst | expo_push_token, platform | Zeile | — |
 | PATCH tenants | Einstellungen (nur erlaubte Spalten) | chef | Felder | Zeile | — |
-| POST fn/billing-checkout | Stripe Checkout öffnen (nur Web) | chef | Tarif | URL | — |
-| POST fn/billing-portal | Stripe Customer Portal | chef | – | URL | — |
 | POST fn/export-tenant | Datenexport (AGB-Pflicht des Originals) | chef | – | ZIP-URL (Storage, signiert) | — |
 | POST fn/delete-account | Eigenes Konto löschen (Apple-Pflicht) | selbst | – | – | — |
 
 Zusammen sind das 40 Routen. 12 davon sind Postgres-Funktionen (11 im Schema, `apply_template` folgt in Migration 2), 7 sind Edge Functions, der Rest ist PostgREST oder Auth. Dazu kommt der Stripe-Webhook.
 
-Webhooks in: `fn/stripe-webhook` (checkout.session.completed, customer.subscription.updated/deleted, invoice.payment_failed). Das Event wird gegen `stripe_events` geprüft und setzt `tenants.plan`/`status`.
+Webhooks in: keine (Bezahlung entfällt).
 Webhooks out: keine.
 
 Jobs:
@@ -139,9 +137,6 @@ Jobs:
 | send-email-notifications | alle 5 min | Mailt Typen mit `email = true` und setzt `emailed_at`. |
 | quick-action-reminders | alle 5 min | `reminder_times` in der Zeitzone des Mandanten fällig: erst `quick_action_reminders_sent` (on conflict do nothing), dann eine Benachrichtigung an die Eingeteilten. |
 | expire-swaps | stündlich | Setzt offene Tausche mit `expires_at < now()` auf `expired`. |
-| trial-expiry | täglich 03:10 | Trial abgelaufen ohne Abo: `status = restricted`, Mail an den Chef. |
-| purge-tenants | täglich 03:40 | Mandanten 90 Tage nach Trial-Ende/Kündigung löschen (Frist aus den AGB des Originals übernommen), Warnmail 7 Tage vorher. |
-| stripe-seat-sync | bei Statusänderung eines Mitglieds + täglich | Setzt die Stripe-Menge für Zusatz-Mitarbeiter auf max(0, aktive − inklusive). |
 
 ## The parts that bite
 
@@ -155,7 +150,7 @@ Jobs:
 - **Arbeitsrecht:** Die Ruhezeit ist pro Mandant einstellbar (Standard 11 h nach § 5 Abs. 1 ArbZG), weil § 5 Abs. 2 für Branchen wie Gastronomie und Pflege Verkürzungen erlaubt. Die Minijob-Grenze ist gesetzlich ein Euro-Betrag und keine Stundenzahl. Das Schema speichert deshalb eine Stundengrenze pro Mitarbeiter, die der Chef selbst festlegt; gesetzliche Werte werden nicht hart codiert.
 - **Feiertage:** Resturlaub zählt aktuell Arbeitstage nach `tenants.workdays`. Gesetzliche Feiertage je Bundesland sind noch nicht modelliert. Sie kommen als eigene Tabelle in Migration 2, sonst wird Urlaub über Feiertage zu hoch gezählt.
 - **Mandanten:** Jede Zeile trägt `tenant_id`, jede Policy prüft die Mitgliedschaft. Eine Person kann Mitglied mehrerer Firmen sein (Aushilfe in zwei Betrieben); die App braucht dafür einen Firmenwechsler.
-- **App-Store-Review:** Apple verlangt Kontolöschung in der App und einen Demo-Zugang für das Review. Ein Kauf-Button oder ein Link zum Kauf in der iOS-App würde Ärger mit den In-App-Purchase-Regeln bringen; dort wird der Tarif nur angezeigt.
+- **App-Store-Review:** Apple verlangt Kontolöschung in der App und einen Demo-Zugang für das Review. Es gibt keine Käufe in der App, die In-App-Purchase-Regeln betreffen sie also nicht.
 - **Realtime-Last:** Abonniert wird nur auf den sichtbaren Zeitraum und den eigenen Mandanten. Danach wird neu geladen, statt einzelne Events ins Cache zu patchen.
 
 ## Build order
@@ -175,7 +170,6 @@ Jobs:
    - Benachrichtigungen: S25.
    - Statistik: S11 (stats_month).
    - Offline-Cache und Upload-Warteschlange.
-   - Abo im Web: S28, Stripe, trial-expiry.
    - Kontolöschung.
 3. **Should-haves.** Qualifikationen und Verfügbarkeit (S27), Vorlagen (S06, apply_template), Resturlaub und Urlaubssperren in S10, Springer-Anfrage (request-replacement), PDF-/Excel-Export, Erinnerungen für Schnellaktionen, Ordner (S18), Aufgaben-Log (S15), „Heute“ (S20), E-Mail-Benachrichtigungen, Einstellungen (S26), Datenexport, purge-tenants, Feiertage.
    **Could-haves.** Standorte, Schicht-Rotation, Übergabe-Notizen (S29), Branding, Sonderschichten, Überstunden.

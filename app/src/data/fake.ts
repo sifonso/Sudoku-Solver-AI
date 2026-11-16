@@ -109,8 +109,8 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       if (db.tenants.some((t) => t.slug === slug)) throw new ApiError('slug_taken');
       const id = uid();
       db.tenants.push({
-        id, slug, name, timezone: 'Europe/Berlin', plan: 'trial',
-        trialEndsAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
+        id, slug, name, timezone: 'Europe/Berlin', plan: 'internal',
+        trialEndsAt: null,
         minRestHours: 11, swapRequiresApproval: true, employeesSeeFullPlan: true, workdays: [1, 2, 3, 4, 5],
       });
       db.members.push({
