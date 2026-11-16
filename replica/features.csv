@@ -1,0 +1,74 @@
+feature,area,priority,original,clone,notes
+Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,no,S01; nativ: Workspace-Lookup per E-Mail statt Subdomain-Eingabe
+14 Tage Trial ohne Kreditkarte,onboarding,must,yes,no,Startseite; AGB § 3
+Login per E-Mail und Passwort,auth,must,yes,no,abgeleitet
+Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
+Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,no,rollen-rechte
+Mitarbeiter sehen nur eigene Details,rollen,must,yes,no,FAQ Rollen
+Sichtbarkeit Gesamtplan für Mitarbeiter konfigurierbar,rollen,should,yes,no,FAQ Rollen
+Schichttypen anlegen (Name Zeiten Wochentage),schichtplanung,must,yes,no,S03 Namen wie Di.-Fr. Frühschicht
+Schichten über Mitternacht,schichtplanung,must,yes,no,Nachtschicht 22:00-06:00 auf S03
+Kalender Monats- und Wochenansicht,schichtplanung,must,yes,no,S03
+Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,no,Drag-and-Drop im Original; mobil per Sheet
+Zuweisung: Zeiten bearbeiten,schichtplanung,must,yes,no,S04
+Zuweisung löschen,schichtplanung,must,yes,no,S04
+Konfliktprüfung Überschneidung,schichtplanung,must,yes,no,schichtplanung
+Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,no,abwesenheiten
+Qualifikationsprüfung bei Zuweisung,schichtplanung,should,yes,no,mitarbeiterverwaltung/pflege
+Ruhezeitprüfung (11 h),schichtplanung,should,yes,no,pflege
+Schichtvorlagen für wiederkehrende Pläne,schichtplanung,should,yes,no,schichtplanung FAQ
+Sonder-/Eventschichten,schichtplanung,could,yes,no,gastronomie
+3-Schicht-Rotation automatisch,schichtplanung,could,yes,no,produktion "Automatische Rotation möglich"
+Mehrere Standorte/Filialen,schichtplanung,could,yes,no,einzelhandel; nur Marketingtext
+Plan drucken / PDF-Export,export,should,yes,no,Drucken-Button S03; FAQ
+Plan als Excel exportieren,export,should,yes,no,FAQ
+Mitarbeiter anlegen/bearbeiten,personal,must,yes,no,S07/S08
+Beschäftigungsart Vollzeit/Aushilfe mit Gruppierung,personal,must,yes,no,S07
+Mitarbeiter sperren,personal,must,yes,no,S07
+Mitarbeiter entfernen/archivieren mit Historie,personal,must,yes,no,S07; FAQ
+Kürzel und Farbe pro Mitarbeiter,personal,must,yes,no,S03/S11
+Feste Schicht pro Mitarbeiter,personal,should,yes,no,"Keine feste Schicht konfiguriert" S07
+Qualifikationen verwalten,personal,should,yes,no,mitarbeiterverwaltung
+Verfügbarkeiten (Self-Service),personal,should,yes,no,mitarbeiterverwaltung/einzelhandel
+Arbeitszeitmodelle und Stundenkontingente,personal,should,yes,no,mitarbeiterverwaltung
+Minijob-Stundenwarnung,personal,could,yes,no,einzelhandel
+Überstunden-Übersicht,personal,could,yes,no,produktion
+Urlaub beantragen,abwesenheiten,must,yes,no,abwesenheiten
+Urlaub genehmigen/ablehnen,abwesenheiten,must,yes,no,abwesenheiten
+Ein-Klick-Krankmeldung,abwesenheiten,must,yes,no,abwesenheiten
+Krankmeldungen-Übersicht,abwesenheiten,must,yes,no,Tab S09
+Resturlaubsanzeige,abwesenheiten,should,yes,no,abwesenheiten
+Urlaubssperren,abwesenheiten,should,yes,no,abwesenheiten
+Ersatz anfragen per Push (Springer),abwesenheiten,should,yes,no,pflege/gastronomie
+Schicht zum Tausch anbieten,schichttausch,must,yes,no,schichttausch
+Auf Tauschangebot bewerben,schichttausch,must,yes,no,schichttausch
+Tausch genehmigen oder Auto-Genehmigung,schichttausch,must,yes,no,schichttausch
+Qualifikationsprüfung beim Tausch,schichttausch,should,yes,no,schichttausch
+Standardaufgaben an Schichttypen hängen,aufgaben,must,yes,no,S13
+Sonderaufgabe für einzelne Zuweisung,aufgaben,must,yes,no,S04/S13
+Aufgaben abhaken,aufgaben,must,yes,no,aufgabenverwaltung
+Wiederkehrende Aufgaben,aufgaben,should,yes,no,aufgabenverwaltung
+Priorität und Fälligkeit,aufgaben,could,yes,no,aufgabenverwaltung
+Aufgaben-Log,aufgaben,should,yes,no,Tab S15
+Gelöschte Aufgaben anzeigen,aufgaben,could,yes,no,S13
+Schnellaktionen-Kachelstart,schnellaktionen,must,yes,no,S16
+Eigene Schnellaktionen mit Messfeldern Farbe Icon,schnellaktionen,must,yes,no,schnellaktionen
+Ordner für Schnellaktionen,schnellaktionen,should,yes,no,S16
+Erinnerungen zu festen Zeiten,schnellaktionen,should,yes,no,schnellaktionen
+Protokoll-Export für Audits,schnellaktionen,should,yes,no,schnellaktionen
+Heute: wer arbeitet heute,schnellaktionen,should,yes,no,S16
+Übergabe-Protokoll pro Schicht,schichtplanung,could,yes,no,pflege/produktion
+Push-Benachrichtigungen (APNs/FCM),benachrichtigungen,must,yes,no,Original nur Web-Push via PWA
+In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,no,Glocke im Header
+Benachrichtigungspräferenzen pro Nutzer und Admin-Default,benachrichtigungen,should,yes,no,benachrichtigungen
+E-Mail-Benachrichtigungen,benachrichtigungen,should,yes,no,benachrichtigungen
+Statistik Schichten und Stunden pro Mitarbeiter und Monat,statistiken,must,yes,no,S11
+Statistik-Export Excel/PDF,statistiken,should,yes,no,S11
+Abwesenheits- und Aufgabenstatistik,statistiken,could,yes,no,statistiken
+Offline lesen und später synchronisieren,mobile,must,yes,no,mobile-app; im Original nur Grundfunktionen
+Eigenes Branding (Professional),abo,could,yes,no,Preise
+Tarife mit Mitarbeiterlimit und Zusatzpreis pro MA,abo,must,yes,no,Preise; Buchung im Web nicht in der App
+Datenexport für Kunden,abo,should,yes,no,AGB § 8 Abs. 4
+Name Logo Texte Screenshots des Originals,branding,skip,yes,skip,gehören dem Anbieter
+Bestandskunden und deren Daten,daten,skip,yes,skip,nur über Export des jeweiligen Kunden
+Enterprise SLA und dedizierter Ansprechpartner,service,skip,yes,skip,Vertrag und Service kein App-Feature
