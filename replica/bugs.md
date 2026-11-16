@@ -125,7 +125,7 @@ Steps
 Expected: S24 öffnet sich.
 Actual: Die App bleibt auf dem Plan. Für Rollen ausgeblendete Reiter waren mit `href: null` konfiguriert; damit ist die Route nicht nur unsichtbar, sondern unerreichbar.
 Evidence: Screenshot zu F07-H2 (Plan statt Tausch), Regressionstest F07-E0.
-Status: fixed in SWAPFIX (nur die Schaltfläche in der Tab-Leiste wird ausgeblendet, `src/app/(app)/(tabs)/_layout.tsx`)
+Status: fixed in 52c27bf (nur die Schaltfläche in der Tab-Leiste wird ausgeblendet, `src/app/(app)/(tabs)/_layout.tsx`)
 
 ## Zu prüfen (nicht reproduziert)
 
