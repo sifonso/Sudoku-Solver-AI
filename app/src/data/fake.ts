@@ -19,6 +19,9 @@ const uid = () =>
 export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
   let session: Session | null = null;
   const pendingByUser = new Map<string, PendingSignup>();
+  const contacts = new Map<string, { email: string | null; phone: string | null }>(
+    db.users.flatMap((u) => db.members.filter((m) => m.userId === u.id).map((m) => [m.id, { email: u.email, phone: null }] as const)),
+  );
 
   const requireSession = () => {
     if (!session) throw new ApiError('not_authenticated');
@@ -111,7 +114,8 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
     async listMembers(tenantId) {
       await wait();
       me(tenantId);
-      return db.members.filter((m) => m.tenantId === tenantId && m.status !== 'archived');
+      // Archivierte gehören dazu: ihre vergangenen Schichten stehen weiter im Plan.
+      return db.members.filter((m) => m.tenantId === tenantId);
     },
     async listShiftTypes(tenantId) {
       await wait();
@@ -253,7 +257,35 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
         id, tenantId: input.tenantId, userId: null, displayName: input.displayName, initials: input.initials.toUpperCase(),
         role: input.role, employmentType: input.employmentType, status: 'invited', monthlyHoursLimit: null, qualificationIds: [],
       });
+      contacts.set(id, { email: input.email.trim().toLowerCase(), phone: null });
       return { memberId: id };
+    },
+    async updateMember(memberId, patch) {
+      await wait();
+      const m = db.members.find((x) => x.id === memberId);
+      if (!m) throw new ApiError('not_found');
+      const actor = me(m.tenantId);
+      if (actor.role !== 'chef') throw new ApiError('forbidden');
+      const next = { ...m, ...patch, initials: (patch.initials ?? m.initials).toUpperCase() };
+      // Trigger keep_one_chef
+      const leavesChef = m.role === 'chef' && m.status === 'active' && (next.role !== 'chef' || next.status !== 'active');
+      if (leavesChef && !db.members.some((o) => o.tenantId === m.tenantId && o.id !== m.id && o.role === 'chef' && o.status === 'active')) {
+        throw new ApiError('last_chef');
+      }
+      // Unique-Index members_initials_unique
+      if (next.status !== 'archived' && db.members.some((o) => o.tenantId === m.tenantId && o.id !== m.id && o.status !== 'archived' && o.initials === next.initials)) {
+        throw new ApiError('initials_taken');
+      }
+      Object.assign(m, next);
+      return { ...m };
+    },
+    async getMemberContact(memberId) {
+      await wait();
+      const m = db.members.find((x) => x.id === memberId);
+      if (!m) return null;
+      const actor = me(m.tenantId);
+      if (!canPlan(actor.role) && actor.id !== m.id) return null;
+      return contacts.get(memberId) ?? { email: null, phone: null };
     },
     async deleteAccount({ deleteTenants }) {
       await wait();

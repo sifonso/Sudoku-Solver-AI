@@ -1,5 +1,5 @@
 // axe-Prüfung (WCAG 2.1 A/AA) auf jedem gebauten Screen.
-import { axe, expect, loginAs, openTab, test } from './fixtures';
+import { memberRow, axe, expect, loginAs, openTab, test } from './fixtures';
 
 test.describe('Barrierefreiheit (axe)', () => {
   test('A11Y-S02 Anmeldung', async ({ page }) => {
@@ -40,6 +40,22 @@ test.describe('Barrierefreiheit (axe)', () => {
     expect(await axe(page)).toEqual([]);
     await page.getByRole('button', { name: 'Zurück' }).click();
     await openTab(page, 'Mehr');
+    expect(await axe(page)).toEqual([]);
+  });
+});
+
+test.describe('Barrierefreiheit (axe) M2', () => {
+  test('A11Y-S07 Personal und S08 Einladen/Bearbeiten', async ({ page }) => {
+    await loginAs(page, 'chef');
+    await openTab(page, 'Personal');
+    await expect(page.getByText('6 aktiv')).toBeVisible();
+    expect(await axe(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Einladen' }).click();
+    await page.getByRole('button', { name: 'Einladung senden' }).click();
+    expect(await axe(page)).toEqual([]);
+    await page.getByRole('button', { name: 'Zurück' }).click();
+    await memberRow(page, 'Tom Sander').click();
+    await expect(page.getByLabel('Stundengrenze pro Monat')).toBeVisible();
     expect(await axe(page)).toEqual([]);
   });
 });

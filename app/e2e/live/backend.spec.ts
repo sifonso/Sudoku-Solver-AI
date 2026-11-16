@@ -118,6 +118,18 @@ test('LIVE-05 Mitarbeiterin: keine Planerrechte, keine fremden Kontakte', async 
   expect(contacts.data?.every((x) => x.member_id === memberB)).toBe(true);
 });
 
+test('LIVE-05b Team ändern: nur Chef, letzter Chef bleibt Chef', async () => {
+  const lim = await u.A.c.from('members').update({ monthly_hours_limit: 40 }).eq('id', memberB).select('monthly_hours_limit');
+  expect(lim.data?.[0]?.monthly_hours_limit).toBe(40);
+  const byB = await u.B.c.from('members').update({ role: 'chef' }).eq('id', memberB).select();
+  expect(byB.data).toEqual([]);
+  const chef = await u.A.c.from('members').select('id').eq('user_id', u.A.id).single();
+  const demote = await u.A.c.from('members').update({ role: 'planer' }).eq('id', chef.data!.id);
+  expect(demote.error?.message).toContain('last_chef');
+  const lock = await u.A.c.from('members').update({ status: 'locked' }).eq('id', chef.data!.id);
+  expect(lock.error?.message).toContain('last_chef');
+});
+
 test('LIVE-06 Fremde Person sieht nichts', async () => {
   for (const tb of ['tenants', 'members', 'shifts', 'assignments', 'notifications', 'invitations', 'member_contacts', 'absences']) {
     const r = await u.C.c.from(tb).select('*');

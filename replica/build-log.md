@@ -20,7 +20,9 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-D
 | S05 Zuweisen | 2026-11-16 | teilweise | echtes Backend | Bereits Eingeteilte standen zuerst als „passt“ in der Liste; jetzt markiert und gesperrt |
 | S21 Meine Schichten | 2026-11-16 | teilweise | echtes Backend; Offline-Cache | Reiter-Beschriftung „Meine Schichten“ wurde auf dem Telefon abgeschnitten, jetzt „Schichten“ |
 | S25 Mitteilungen | 2026-11-16 | teilweise | Push (APNs/FCM), Einstellungen pro Typ | – |
-| S06–S20, S22–S24, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
+| S07 Personal | 2026-11-16 | fertig | Wochensoll pro Person | Nach „Zum Team“ hing per `replace` ein zweiter Tab-Navigator im Stapel; jetzt `back` |
+| S08 Mitarbeiter (+ Einladen) | 2026-11-16 | fertig | Qualifikationen, Verfügbarkeit (S27) | Letzter Chef konnte sich aussperren; jetzt DB-Trigger `keep_one_chef`. Eingeladene waren nicht einplanbar, Archivierte fielen aus dem Plan: beides korrigiert |
+| S06, S09–S20, S22–S24, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
 
 ## Technik, die nicht offensichtlich war
 

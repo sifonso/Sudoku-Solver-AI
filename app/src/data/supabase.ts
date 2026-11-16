@@ -61,6 +61,9 @@ function fail(e: PostgrestError | { message?: string; code?: string; status?: nu
   if (code === '42501' || msg.includes('forbidden') || msg.includes('row-level security')) throw new ApiError('forbidden');
   if (code === 'P0002' || code === 'PGRST116') throw new ApiError('not_found');
   if (code === '23505' && msg.includes('slug')) throw new ApiError('slug_taken');
+  if (code === '23505' && msg.includes('initials')) throw new ApiError('initials_taken');
+  if (msg.includes('last_chef')) throw new ApiError('last_chef');
+  if (msg.includes('member_limit_reached')) throw new ApiError('member_limit_reached');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
   throw new ApiError('network', msg || code || 'unbekannter Fehler');
 }
@@ -176,7 +179,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     async listMembers(tenantId) {
       const rows = await q(sb.from('members').select('*, member_qualifications(qualification_id)')
-        .eq('tenant_id', tenantId).neq('status', 'archived').order('sort').order('display_name'));
+        .eq('tenant_id', tenantId).order('sort').order('display_name'));
       return (rows as Row[]).map(toMember);
     },
     async listShiftTypes(tenantId) {
@@ -285,6 +288,23 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         throw new ApiError('network', code ?? error.message);
       }
       return { memberId: (data as Row).member_id };
+    },
+    async updateMember(memberId, patch) {
+      const row: Row = {};
+      if (patch.displayName !== undefined) row.display_name = patch.displayName;
+      if (patch.initials !== undefined) row.initials = patch.initials.toUpperCase();
+      if (patch.role !== undefined) row.role = patch.role;
+      if (patch.employmentType !== undefined) row.employment_type = patch.employmentType;
+      if (patch.status !== undefined) row.status = patch.status;
+      if (patch.monthlyHoursLimit !== undefined) row.monthly_hours_limit = patch.monthlyHoursLimit;
+      const r = await q(sb.from('members').update(row).eq('id', memberId).select('*, member_qualifications(qualification_id)'));
+      // RLS: Nicht-Chef bekommt 0 Zeilen statt Fehler
+      if (!(r as Row[]).length) throw new ApiError('forbidden');
+      return toMember((r as Row[])[0]!);
+    },
+    async getMemberContact(memberId) {
+      const r = await q(sb.from('member_contacts').select('email, phone').eq('member_id', memberId).maybeSingle());
+      return r ? { email: (r as Row).email ?? null, phone: (r as Row).phone ?? null } : null;
     },
     async deleteAccount({ deleteTenants }) {
       const { error } = await sb.functions.invoke('delete-account', { body: { confirm: true, delete_tenants: deleteTenants } });

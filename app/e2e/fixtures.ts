@@ -61,3 +61,8 @@ export async function axe(page: Page) {
   const r = await new AxeBuilder({ page: page as unknown as ConstructorParameters<typeof AxeBuilder>[0]['page'] }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   return r.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length}× ${v.help}`);
 }
+
+/** Zeile in der Personal-Liste (S07): Name gefolgt von „Rolle · Beschäftigung“. */
+export function memberRow(page: Page, name: string) {
+  return page.getByRole('button', { name: new RegExp(`${name}.*(Mitarbeiter|Planer|Aufgaben|Chef) ·`) });
+}

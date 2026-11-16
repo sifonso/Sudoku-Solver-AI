@@ -35,7 +35,7 @@ export function useCandidates(shiftTypeId: string, date: string) {
       const [members, plan] = await Promise.all([api.listMembers(tenant.id), api.listPlan(tenant.id, date, date)]);
       const assignedIds = new Set(plan.find((s) => s.shiftType.id === shiftTypeId)?.assignments.map((a) => a.memberId));
       const rows = await Promise.all(
-        members.filter((m) => m.status === 'active').map(async (member) => ({
+        members.filter((m) => m.status === 'active' || m.status === 'invited').map(async (member) => ({
           member,
           assigned: assignedIds.has(member.id),
           warnings: assignedIds.has(member.id) ? [] : await api.checkAssignment(shift.id, member.id),
@@ -86,5 +86,37 @@ export function useMarkRead() {
   return useMutation({
     mutationFn: (ids: string[]) => api.markNotificationsRead(ids),
     onSettled: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+}
+
+export function useMember(memberId: string) {
+  const members = useMembers();
+  return { ...members, data: members.data?.find((m) => m.id === memberId) };
+}
+
+export function useMemberContact(memberId: string) {
+  return useQuery({ queryKey: ['memberContact', memberId], queryFn: () => api.getMemberContact(memberId) });
+}
+
+function useInvalidateTeam() {
+  const qc = useQueryClient();
+  return () => {
+    for (const k of ['members', 'memberships', 'memberContact', 'plan', 'candidates']) qc.invalidateQueries({ queryKey: [k] });
+  };
+}
+
+export function useUpdateMember() {
+  const invalidate = useInvalidateTeam();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: import('./api').MemberPatch }) => api.updateMember(id, patch),
+    onSettled: invalidate,
+  });
+}
+
+export function useInviteMember() {
+  const invalidate = useInvalidateTeam();
+  return useMutation({
+    mutationFn: (input: import('./api').InviteInput) => api.inviteMember(input),
+    onSettled: invalidate,
   });
 }

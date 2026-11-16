@@ -18,6 +18,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange, l
             key={o.value}
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
+            aria-checked={on}
             onPress={() => onChange(o.value)}
             style={[styles.segItem, on && { backgroundColor: c.accent }]}
           >
@@ -43,6 +44,7 @@ export function Tabs<T extends string>({ options, value, onChange }: {
             key={o.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
+            aria-selected={on}
             onPress={() => onChange(o.value)}
             style={[styles.tab, { borderBottomColor: on ? c.highlight : 'transparent' }]}
           >
@@ -62,4 +64,38 @@ const styles = StyleSheet.create({
   semibold: { fontFamily: 'Inter_600SemiBold' },
   tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, gap: 4 },
   tab: { minHeight: tokens.size.touchMin, paddingHorizontal: 12, justifyContent: 'center', borderBottomWidth: 3 },
+});
+
+/** Auswahl mit umbrechenden Chips (Rolle, Beschäftigungsart). Für mehr Optionen als SegmentedControl verträgt. */
+export function ChoiceChips<T extends string>({ options, value, onChange, label }: {
+  options: Option<T>[]; value: T; onChange: (v: T) => void; label: string;
+}) {
+  const { c } = useTheme();
+  return (
+    <View style={{ gap: 6 }}>
+      <Text variant="label" color="textMuted">{label}</Text>
+      <View accessibilityRole="radiogroup" accessibilityLabel={label} style={chipStyles.wrap}>
+        {options.map((o) => {
+          const on = o.value === value;
+          return (
+            <Pressable
+              key={o.value}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              aria-checked={on}
+              onPress={() => onChange(o.value)}
+              style={[chipStyles.chip, { borderColor: on ? c.accent : c.borderInput, backgroundColor: on ? c.accent : c.surfaceRaised }]}
+            >
+              <Text variant="sm" color={on ? 'onAccent' : 'text'} style={{ fontFamily: 'Inter_600SemiBold' }}>{o.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { minHeight: tokens.size.touchMin, paddingHorizontal: 14, borderRadius: tokens.radius.pill, borderWidth: 1, justifyContent: 'center' },
 });

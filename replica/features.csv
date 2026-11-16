@@ -3,7 +3,7 @@ Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"
 14 Tage Trial ohne Kreditkarte,onboarding,must,yes,partial,Restlaufzeit unter Mehr sichtbar; Ablauf-Job fehlt
 Login per E-Mail und Passwort,auth,must,yes,partial,S02 fertig inkl. Fehlerzustand und Tastatur; Supabase angebunden
 Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
-Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,partial,Reiter und Rechte je Rolle; Rollenwechsel in S08 fehlt
+Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,yes,Rolle in S08; DB hält immer einen aktiven Chef (Trigger keep_one_chef)
 Mitarbeiter sehen nur eigene Details,rollen,must,yes,partial,Fake-API prüft wie RLS; echte RLS getestet im Schema
 Sichtbarkeit Gesamtplan für Mitarbeiter konfigurierbar,rollen,should,yes,no,FAQ Rollen
 Schichttypen anlegen (Name Zeiten Wochentage),schichtplanung,must,yes,partial,Standardtypen bei Registrierung; S06 noch Stub
@@ -22,16 +22,16 @@ Sonder-/Eventschichten,schichtplanung,could,yes,no,gastronomie
 Mehrere Standorte/Filialen,schichtplanung,could,yes,no,einzelhandel; nur Marketingtext
 Plan drucken / PDF-Export,export,should,yes,partial,Drucken-Button nur im Web (Browserdruck)
 Plan als Excel exportieren,export,should,yes,no,FAQ
-Mitarbeiter anlegen/bearbeiten,personal,must,yes,no,S07/S08
-Beschäftigungsart Vollzeit/Aushilfe mit Gruppierung,personal,must,yes,partial,Farbcodierung im Plan; Gruppierung in S07 fehlt
-Mitarbeiter sperren,personal,must,yes,no,S07
-Mitarbeiter entfernen/archivieren mit Historie,personal,must,yes,no,S07; FAQ
-Kürzel und Farbe pro Mitarbeiter,personal,must,yes,partial,Kürzel + Farbe nach Beschäftigungsart im Plan
+Mitarbeiter anlegen/bearbeiten,personal,must,yes,yes,"S07/S08: Einladen per E-Mail (Edge Function), Bearbeiten; e2e + live"
+Beschäftigungsart Vollzeit/Aushilfe mit Gruppierung,personal,must,yes,yes,S07 gruppiert Vollzeit/Teilzeit/Aushilfe/Eingeladen/Gesperrt
+Mitarbeiter sperren,personal,must,yes,yes,S08; gesperrte werden nicht vorgeschlagen
+Mitarbeiter entfernen/archivieren mit Historie,personal,must,yes,yes,S08; vergangene Schichten bleiben im Plan
+Kürzel und Farbe pro Mitarbeiter,personal,must,yes,yes,"Kürzel frei wählbar, eindeutig; Farbe nach Beschäftigungsart"
 Feste Schicht pro Mitarbeiter,personal,should,yes,no,Keine feste Schicht konfiguriert S07
 Qualifikationen verwalten,personal,should,yes,no,mitarbeiterverwaltung
 Verfügbarkeiten (Self-Service),personal,should,yes,no,mitarbeiterverwaltung/einzelhandel
-Arbeitszeitmodelle und Stundenkontingente,personal,should,yes,no,mitarbeiterverwaltung
-Minijob-Stundenwarnung,personal,could,yes,partial,Warnung bei Monatsgrenze in S05
+Arbeitszeitmodelle und Stundenkontingente,personal,should,yes,partial,Monatsgrenze ja; Wochensoll fehlt
+Minijob-Stundenwarnung,personal,could,yes,yes,"Stundengrenze pro Person in S08, Hinweis beim Zuweisen"
 Überstunden-Übersicht,personal,could,yes,no,produktion
 Urlaub beantragen,abwesenheiten,must,yes,no,abwesenheiten
 Urlaub genehmigen/ablehnen,abwesenheiten,must,yes,no,abwesenheiten
