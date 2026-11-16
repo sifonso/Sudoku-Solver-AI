@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { createContext, useContext, type ReactNode } from 'react';
 import type { Member, Session, Tenant } from '../domain/types';
-import { api } from './fake';
+import { api } from './client';
 
 type Ctx = {
   session: Session | null;
@@ -24,6 +24,7 @@ function switchSession(qc: QueryClient, s: Session | null) {
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
+  const qc = useQueryClient();
   const session = useQuery({ queryKey: ['session'], queryFn: () => api.getSession(), staleTime: Infinity });
   const userId = session.data?.userId;
   const memberships = useQuery({
@@ -31,14 +32,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryFn: () => api.myMemberships(),
     enabled: !!userId,
   });
+  const noMembership = !!userId && memberships.isSuccess && memberships.data.length === 0;
+  // Erste Anmeldung nach bestätigter E-Mail: Firma aus den Registrierungsdaten anlegen.
+  const complete = useQuery({
+    queryKey: ['completeSignup', userId],
+    queryFn: async () => {
+      const tenantId = await api.completeSignup();
+      if (tenantId) await qc.invalidateQueries({ queryKey: ['memberships', userId] });
+      return tenantId ?? '';
+    },
+    enabled: noMembership,
+    staleTime: Infinity,
+    retry: 1,
+  });
   // Eine Firma pro Person im Durchstich; Firmenwechsler folgt (architecture.md: Mandanten).
   const active = memberships.data?.[0] ?? null;
   const value: Ctx = {
     session: session.data ?? null,
-    loading: session.isLoading || (!!userId && memberships.isLoading),
+    loading: session.isLoading || (!!userId && memberships.isLoading) || (noMembership && complete.isLoading),
     tenant: active?.tenant ?? null,
     member: active?.member ?? null,
-    needsTenant: !!userId && memberships.isSuccess && memberships.data.length === 0,
+    needsTenant: noMembership && !complete.isLoading,
   };
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
@@ -72,22 +86,31 @@ export function useSignOut() {
   });
 }
 
-/** Registrierung = Konto + Firma + Standard-Schichttypen in einem Ablauf (F01). */
+export type RegisterResult = { status: 'signed_in' } | { status: 'confirm_email'; email: string };
+
+/**
+ * Registrierung (F01): Konto mit Firmendaten in den Metadaten. Mit E-Mail-Bestätigung kommt keine
+ * Sitzung zurück; die Firma entsteht dann bei der ersten Anmeldung (SessionProvider -> completeSignup).
+ */
 export function useRegister() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (i: { email: string; password: string; company: string; slug: string; name: string; initials: string }) => {
-      const s = await api.signUp(i.email, i.password);
-      const tenantId = await api.createTenant({ slug: i.slug, name: i.company, displayName: i.name, initials: i.initials });
-      const defaults = [
-        { name: 'Frühschicht', startTime: '06:00', endTime: '14:00' },
-        { name: 'Spätschicht', startTime: '14:00', endTime: '22:00' },
-      ];
-      for (const [sort, d] of defaults.entries()) {
-        await api.createShiftType({ tenantId, ...d, weekdays: [1, 2, 3, 4, 5], minStaff: 1, qualificationIds: [], sort });
-      }
-      return s;
+    mutationFn: async (i: { email: string; password: string; company: string; slug: string; name: string; initials: string }): Promise<RegisterResult> => {
+      const s = await api.signUp(i.email, i.password, { company: i.company, slug: i.slug, displayName: i.name, initials: i.initials });
+      if (!s) return { status: 'confirm_email', email: i.email.trim() };
+      switchSession(qc, s);
+      return { status: 'signed_in' };
     },
-    onSuccess: (s) => switchSession(qc, s),
+  });
+}
+
+/** Konto löschen. Ergebnis 'sole_chef': der Betrieb würde mitgelöscht, die App fragt ein zweites Mal. */
+export function useDeleteAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (deleteTenants: boolean) => api.deleteAccount({ deleteTenants }),
+    onSuccess: (r) => {
+      if (r === 'deleted') switchSession(qc, null);
+    },
   });
 }

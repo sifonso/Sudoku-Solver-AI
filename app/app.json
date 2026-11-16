@@ -29,7 +29,13 @@
           "root": "./src/app"
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#252940"
+        }
+      ]
     ],
     "scheme": "schichtplaner"
   }

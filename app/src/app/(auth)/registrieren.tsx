@@ -45,9 +45,21 @@ export default function RegisterScreen() {
   };
   const err = register.error instanceof ApiError ? register.error.code : register.error ? 'network' : null;
   const failure =
-    err === 'email_taken' ? 'Mit dieser E-Mail gibt es schon ein Konto. Bitte anmelden.'
+    err === 'weak_password' ? 'Das Passwort ist zu schwach. Bitte ein längeres oder weniger übliches wählen.'
+    : err === 'rate_limited' ? 'Zu viele Versuche. Bitte in ein paar Minuten noch einmal.'
+    : err === 'email_taken' ? 'Mit dieser E-Mail gibt es schon ein Konto. Bitte anmelden.'
       : err === 'slug_taken' ? 'Diese Firmenadresse ist vergeben. Bitte eine andere wählen.'
         : err ? 'Registrierung gerade nicht möglich. Bitte gleich noch einmal versuchen.' : null;
+
+  if (register.data?.status === 'confirm_email') {
+    return (
+      <AuthFrame eyebrow="Fast geschafft" title="Bitte E-Mail bestätigen"
+        intro={`Wir haben einen Link an ${register.data.email} geschickt. Nach dem Klick meldest du dich an, und dein Betrieb wird angelegt.`}>
+        <Text variant="sm" color="textMuted">Keine Mail da? Schau im Spam-Ordner nach. Der Link ist 24 Stunden gültig.</Text>
+        <Link href="/login" asChild><Button label="Zur Anmeldung" fullWidth size="lg" /></Link>
+      </AuthFrame>
+    );
+  }
 
   return (
     <AuthFrame eyebrow="14 Tage kostenlos testen" title="Betrieb anlegen" intro="Du wirst Chef deines Betriebs und kannst danach dein Team einladen.">

@@ -1,12 +1,13 @@
 import { router, type Href } from 'expo-router';
-import { ChevronRight, LogOut } from 'lucide-react-native';
+import { ChevronRight, LogOut, Trash2 } from 'lucide-react-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { canPlan, roleLabel } from '../../../data/api';
-import { useActive, useSignOut } from '../../../data/session';
+import { useActive, useDeleteAccount, useSignOut } from '../../../data/session';
 import type { Role } from '../../../domain/types';
 import { AppScreen } from '../../../features/AppScreen';
 import { useTheme } from '../../../theme';
-import { Avatar, Badge, Button, Card, ListRow, SectionHeader, Text } from '../../../ui';
+import { Avatar, Badge, Banner, Button, Card, ListRow, SectionHeader, Text } from '../../../ui';
 
 type Item = { label: string; href: Href; id: string; roles: Role[] | 'all' };
 const ITEMS: Item[] = [
@@ -32,6 +33,8 @@ export default function MoreScreen() {
   const { c } = useTheme();
   const { tenant, member } = useActive();
   const signOut = useSignOut();
+  const del = useDeleteAccount();
+  const [step, setStep] = useState<'idle' | 'confirm' | 'tenant'>('idle');
   const items = ITEMS.filter((i) => i.roles === 'all' || i.roles.includes(member.role));
   const trialDays = Math.max(0, Math.ceil((Date.parse(tenant.trialEndsAt) - Date.now()) / 86_400_000));
   return (
@@ -53,6 +56,38 @@ export default function MoreScreen() {
       </Card>
       <Button label="Abmelden" variant="secondary" icon={LogOut} onPress={() => signOut.mutate()} loading={signOut.isPending} />
       <Button label="Designsystem ansehen" variant="ghost" onPress={() => router.push('/design')} />
+
+      <SectionHeader title="Konto" />
+      {step === 'idle' ? (
+        <Button label="Konto löschen" variant="ghost" icon={Trash2} onPress={() => setStep('confirm')} />
+      ) : (
+        <Card style={styles.danger}>
+          {step === 'confirm' ? (
+            <>
+              <Text variant="lg">Konto wirklich löschen?</Text>
+              <Text variant="sm" color="textMuted">
+                Dein Login wird gelöscht. Deine bisherigen Schichten bleiben beim Betrieb als Arbeitszeitnachweis, ohne Verbindung zu deinem Konto.
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text variant="lg">Damit wird auch {tenant.name} gelöscht</Text>
+              <Text variant="sm" color="textMuted">
+                Du bist der einzige Chef. Der ganze Betrieb mit Plan, Team, Aufgaben und Protokollen wird endgültig gelöscht. Wenn das Team weitermachen soll, ernenne vorher jemand anderen zum Chef.
+              </Text>
+            </>
+          )}
+          {del.isError ? <Banner tone="danger" title="Löschen fehlgeschlagen" body="Bitte noch einmal versuchen." /> : null}
+          <View style={styles.dangerRow}>
+            <Button label="Abbrechen" variant="secondary" onPress={() => { setStep('idle'); del.reset(); }} />
+            <Button
+              label={step === 'tenant' ? 'Konto und Betrieb löschen' : 'Endgültig löschen'}
+              variant="danger" icon={Trash2} loading={del.isPending}
+              onPress={() => del.mutate(step === 'tenant', { onSuccess: (r) => { if (r === 'sole_chef') setStep('tenant'); } })}
+            />
+          </View>
+        </Card>
+      )}
     </AppScreen>
   );
 }
@@ -60,4 +95,6 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   me: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   list: { paddingVertical: 0 },
+  danger: { gap: 10 },
+  dangerRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
 });

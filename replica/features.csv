@@ -1,5 +1,5 @@
 feature,area,priority,original,clone,notes
-Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"S01 fertig, Firmenadresse aus Name; Fake-Datenschicht; echt mit /replica-backend"
+Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"S01 mit E-Mail-Bestätigung, Firma entsteht beim ersten Login; Supabase-Datenschicht gebaut, Projekt noch nicht verbunden"
 14 Tage Trial ohne Kreditkarte,onboarding,must,yes,partial,Restlaufzeit unter Mehr sichtbar; Ablauf-Job fehlt
 Login per E-Mail und Passwort,auth,must,yes,partial,S02 fertig inkl. Fehlerzustand und Tastatur; Fake-Datenschicht; echt mit /replica-backend
 Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
@@ -58,7 +58,7 @@ Erinnerungen zu festen Zeiten,schnellaktionen,should,yes,no,schnellaktionen
 Protokoll-Export für Audits,schnellaktionen,should,yes,no,schnellaktionen
 Heute: wer arbeitet heute,schnellaktionen,should,yes,no,S16
 Übergabe-Protokoll pro Schicht,schichtplanung,could,yes,no,pflege/produktion
-Push-Benachrichtigungen (APNs/FCM),benachrichtigungen,must,yes,no,Original nur Web-Push via PWA
+Push-Benachrichtigungen (APNs/FCM),benachrichtigungen,must,yes,partial,Registrierung + send-push gebaut; aktiv nach EAS-Projekt und Webhook
 In-App-Benachrichtigungszentrale,benachrichtigungen,must,yes,partial,S25 + Glocke mit Zähler; Trigger im Schema ergänzt
 Benachrichtigungspräferenzen pro Nutzer und Admin-Default,benachrichtigungen,should,yes,no,benachrichtigungen
 E-Mail-Benachrichtigungen,benachrichtigungen,should,yes,no,benachrichtigungen

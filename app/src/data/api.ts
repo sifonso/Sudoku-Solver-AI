@@ -18,11 +18,23 @@ export type ApiErrorCode =
   | 'forbidden'
   | 'no_double_booking'
   | 'not_found'
-  | 'network';
+  | 'network'
+  | 'weak_password'
+  | 'rate_limited'
+  | 'member_limit_reached'
+  | 'initials_taken';
 
 export interface Membership {
   tenant: Tenant;
   member: Member;
+}
+
+/** Firmendaten aus der Registrierung. Liegen in den Konto-Metadaten, bis die E-Mail bestätigt ist. */
+export interface PendingSignup {
+  company: string;
+  slug: string;
+  displayName: string;
+  initials: string;
 }
 
 export interface MyShift {
@@ -36,7 +48,10 @@ export interface Api {
   // Auth (Supabase Auth)
   getSession(): Promise<Session | null>;
   signIn(email: string, password: string): Promise<Session>;
-  signUp(email: string, password: string): Promise<Session>;
+  /** null = Bestätigungs-Mail verschickt, Anmeldung erst nach Klick auf den Link. */
+  signUp(email: string, password: string, pending: PendingSignup): Promise<Session | null>;
+  /** Legt nach der ersten Anmeldung Firma + Standard-Schichttypen an, falls noch keine Mitgliedschaft. */
+  completeSignup(): Promise<string | null>;
   signOut(): Promise<void>;
 
   // Mandant (rpc create_tenant, select members)
@@ -61,6 +76,22 @@ export interface Api {
   // Benachrichtigungen
   listNotifications(tenantId: string): Promise<AppNotification[]>;
   markNotificationsRead(ids: string[]): Promise<void>;
+  registerDeviceToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<void>;
+
+  // Team (Edge Function invite-member)
+  inviteMember(input: InviteInput): Promise<{ memberId: string }>;
+
+  // Konto (Edge Function delete-account). sole_chef = Betrieb würde mitgelöscht, zweite Bestätigung nötig.
+  deleteAccount(opts: { deleteTenants: boolean }): Promise<'deleted' | 'sole_chef'>;
+}
+
+export interface InviteInput {
+  tenantId: string;
+  displayName: string;
+  initials: string;
+  email: string;
+  role: Role;
+  employmentType: import('../domain/types').Employment;
 }
 
 export const roleLabel: Record<Role, string> = {

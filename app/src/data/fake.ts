@@ -4,8 +4,9 @@
 import { checkAssignment as runCheck } from '../domain/rules';
 import { addDays, formatDate, isoWeekday, localTime, overlaps, shiftBounds, weekdayShort } from '../domain/time';
 import type { Assignment, Member, PlanSlot, Session, Shift } from '../domain/types';
-import { ApiError, canPlan, type Api, type Membership, type MyShift } from './api';
+import { ApiError, canPlan, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { seed, type DB } from './seed';
+import { DEFAULT_SHIFT_TYPES } from './defaults';
 
 const LATENCY_MS = 180;
 const wait = () => new Promise((r) => setTimeout(r, LATENCY_MS));
@@ -17,6 +18,7 @@ const uid = () =>
 
 export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
   let session: Session | null = null;
+  const pendingByUser = new Map<string, PendingSignup>();
 
   const requireSession = () => {
     if (!session) throw new ApiError('not_authenticated');
@@ -55,14 +57,28 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       session = { userId: u.id, email: u.email };
       return session;
     },
-    async signUp(email, password) {
+    async signUp(email, password, pending) {
       await wait();
       const e = email.trim().toLowerCase();
       if (db.users.some((x) => x.email === e)) throw new ApiError('email_taken');
+      if (db.tenants.some((t) => t.slug === pending.slug)) throw new ApiError('slug_taken');
       const u = { id: uid(), email: e, password };
       db.users.push(u);
+      pendingByUser.set(u.id, pending);
+      // Fake: E-Mail gilt sofort als bestätigt.
       session = { userId: u.id, email: u.email };
       return session;
+    },
+    async completeSignup() {
+      const s = requireSession();
+      const p = pendingByUser.get(s.userId);
+      if (!p || db.members.some((m) => m.userId === s.userId)) return null;
+      const tenantId = await this.createTenant({ slug: p.slug, name: p.company, displayName: p.displayName, initials: p.initials });
+      for (const [sort, d] of DEFAULT_SHIFT_TYPES.entries()) {
+        await this.createShiftType({ tenantId, ...d, sort });
+      }
+      pendingByUser.delete(s.userId);
+      return tenantId;
     },
     async signOut() {
       session = null;
@@ -220,6 +236,39 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       await wait();
       const m = me(tenantId);
       return db.notifications.filter((n) => n.memberId === m.id);
+    },
+    async registerDeviceToken() {
+      requireSession();
+    },
+    async inviteMember(input) {
+      await wait();
+      const m = me(input.tenantId);
+      if (m.role !== 'chef') throw new ApiError('forbidden');
+      const tenant = tenantOf(input.tenantId);
+      const active = db.members.filter((x) => x.tenantId === input.tenantId && (x.status === 'active' || x.status === 'invited'));
+      if (tenant.plan === 'trial' && active.length >= 10) throw new ApiError('member_limit_reached');
+      if (active.some((x) => x.initials === input.initials.toUpperCase())) throw new ApiError('initials_taken');
+      const id = uid();
+      db.members.push({
+        id, tenantId: input.tenantId, userId: null, displayName: input.displayName, initials: input.initials.toUpperCase(),
+        role: input.role, employmentType: input.employmentType, status: 'invited', monthlyHoursLimit: null, qualificationIds: [],
+      });
+      return { memberId: id };
+    },
+    async deleteAccount({ deleteTenants }) {
+      await wait();
+      const s = requireSession();
+      const mine = db.members.filter((m) => m.userId === s.userId);
+      const soleChef = mine.filter((m) => m.role === 'chef' && m.status === 'active' &&
+        !db.members.some((o) => o.tenantId === m.tenantId && o.id !== m.id && o.role === 'chef' && o.status === 'active'));
+      if (soleChef.length && !deleteTenants) return 'sole_chef';
+      const dropTenants = new Set(soleChef.map((m) => m.tenantId));
+      db.tenants = db.tenants.filter((t) => !dropTenants.has(t.id));
+      db.members = db.members.filter((m) => !dropTenants.has(m.tenantId));
+      for (const m of db.members) if (m.userId === s.userId) { m.userId = null; m.status = 'archived'; }
+      db.users = db.users.filter((u) => u.id !== s.userId);
+      session = null;
+      return 'deleted';
     },
     async markNotificationsRead(ids) {
       const s = requireSession();

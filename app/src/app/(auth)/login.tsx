@@ -2,8 +2,9 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ApiError } from '../../data/api';
+import { backend } from '../../data/client';
 import { DEMO_PASSWORD, DEMO_USERS } from '../../data/seed';
-import { useSignIn } from '../../data/session';
+import { useSession, useSignIn, useSignOut } from '../../data/session';
 import { AuthFrame } from '../../features/AuthFrame';
 import { Banner, Button, Text, TextField } from '../../ui';
 
@@ -13,6 +14,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [touched, setTouched] = useState(false);
   const signIn = useSignIn();
+  const signOut = useSignOut();
+  const { needsTenant, session } = useSession();
 
   const emailError = touched && !/^\S+@\S+\.\S+$/.test(email) ? 'Bitte eine gültige E-Mail-Adresse eingeben.' : undefined;
   const pwError = touched && password.length === 0 ? 'Bitte das Passwort eingeben.' : undefined;
@@ -21,15 +24,22 @@ export default function LoginScreen() {
     if (!/^\S+@\S+\.\S+$/.test(email) || !password) return;
     signIn.mutate({ email, password });
   };
+  const code = signIn.error instanceof ApiError ? signIn.error.code : null;
   const failure =
-    signIn.error instanceof ApiError && signIn.error.code === 'invalid_credentials'
-      ? 'E-Mail oder Passwort stimmen nicht.'
+    code === 'invalid_credentials'
+      ? 'E-Mail oder Passwort stimmen nicht, oder die E-Mail ist noch nicht bestätigt.'
+      : code === 'rate_limited' ? 'Zu viele Versuche. Bitte in ein paar Minuten noch einmal.'
       : signIn.error
         ? 'Anmeldung gerade nicht möglich. Bitte gleich noch einmal versuchen.'
         : null;
 
   return (
     <AuthFrame eyebrow="Anmelden" title="Willkommen zurück" intro="Melde dich mit deiner Arbeits-E-Mail an.">
+      {needsTenant ? (
+        <Banner tone="warning" title={`${session?.email ?? 'Dieses Konto'} gehört noch zu keinem Betrieb.`}
+          body="Lass dich von deinem Chef einladen oder registriere einen eigenen Betrieb."
+          action={<Button label="Abmelden" size="sm" variant="secondary" onPress={() => signOut.mutate()} />} />
+      ) : null}
       {failure ? <Banner tone="danger" title={failure} /> : null}
       <TextField
         label="E-Mail" value={email} onChangeText={setEmail} error={emailError}
@@ -49,7 +59,7 @@ export default function LoginScreen() {
         </Link>
       </View>
 
-      <View style={styles.demo}>
+      {backend === 'demo' ? (<View style={styles.demo}>
         <Text variant="label" color="textMuted">Demo-Zugänge (nur Testdaten)</Text>
         {DEMO_USERS.map((u) => (
           <Button
@@ -64,7 +74,7 @@ export default function LoginScreen() {
             }}
           />
         ))}
-      </View>
+      </View>) : null}
     </AuthFrame>
   );
 }
