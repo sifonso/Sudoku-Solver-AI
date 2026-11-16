@@ -44,13 +44,13 @@ Schicht zum Tausch anbieten,schichttausch,must,yes,yes,S24; eigene Schichten der
 Auf Tauschangebot bewerben,schichttausch,must,yes,yes,"S24 ""Ich übernehme""; Anbieter wird benachrichtigt"
 Tausch genehmigen oder Auto-Genehmigung,schichttausch,must,yes,yes,"Anbieter wählt, Planer gibt frei/lehnt ab; ohne Freigabepflicht sofort (Einstellung im Schema)"
 Qualifikationsprüfung beim Tausch,schichttausch,should,yes,partial,"Planer sieht beim Freigeben alle Hinweise (Qualifikation, Ruhezeit, Abwesenheit, Stunden); Pflege der Qualifikationen fehlt"
-Standardaufgaben an Schichttypen hängen,aufgaben,must,yes,no,S13
-Sonderaufgabe für einzelne Zuweisung,aufgaben,must,yes,no,S04/S13
-Aufgaben abhaken,aufgaben,must,yes,no,aufgabenverwaltung
-Wiederkehrende Aufgaben,aufgaben,should,yes,no,aufgabenverwaltung
-Priorität und Fälligkeit,aufgaben,could,yes,no,aufgabenverwaltung
+Standardaufgaben an Schichttypen hängen,aufgaben,must,yes,yes,S13/S14 mit Schichttypen und Wochentagen
+Sonderaufgabe für einzelne Zuweisung,aufgaben,must,yes,yes,"aus S04 ""Sonderaufgabe""; Person wird benachrichtigt (Trigger)"
+Aufgaben abhaken,aufgaben,must,yes,yes,"Checkliste je Schicht in S21; idempotent; ""erledigt von"""
+Wiederkehrende Aufgaben,aufgaben,should,yes,partial,Wiederholung je Schicht und Wochentag; monatliche Rhythmen fehlen
+Priorität und Fälligkeit,aufgaben,could,yes,partial,Priorität ja (Sortierung); Fälligkeitszeit fehlt
 Aufgaben-Log,aufgaben,should,yes,no,Tab S15
-Gelöschte Aufgaben anzeigen,aufgaben,could,yes,no,S13
+Gelöschte Aufgaben anzeigen,aufgaben,could,yes,yes,"S13 Checkbox, Wiederherstellen"
 Schnellaktionen-Kachelstart,schnellaktionen,must,yes,no,S16
 Eigene Schnellaktionen mit Messfeldern Farbe Icon,schnellaktionen,must,yes,no,schnellaktionen
 Ordner für Schnellaktionen,schnellaktionen,should,yes,no,S16

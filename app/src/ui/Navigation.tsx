@@ -99,3 +99,35 @@ const chipStyles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { minHeight: tokens.size.touchMin, paddingHorizontal: 14, borderRadius: tokens.radius.pill, borderWidth: 1, justifyContent: 'center' },
 });
+
+/** Mehrfachauswahl als Chips (Schichttypen, Wochentage). Rolle checkbox, damit Screenreader „ausgewählt“ ansagen. */
+export function MultiChips<T extends string | number>({ options, values, onChange, label, hint }: {
+  options: { value: T; label: string }[]; values: T[]; onChange: (v: T[]) => void; label: string; hint?: string;
+}) {
+  const { c } = useTheme();
+  return (
+    <View style={{ gap: 6 }}>
+      <Text variant="label" color="textMuted">{label}</Text>
+      {/* role group: eine Liste dürfte nur listitems enthalten (axe aria-required-children, BUG-009) */}
+      <View role="group" aria-label={label} style={chipStyles.wrap}>
+        {options.map((o) => {
+          const on = values.includes(o.value);
+          return (
+            <Pressable
+              key={String(o.value)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: on }}
+              aria-checked={on}
+              accessibilityLabel={o.label}
+              onPress={() => onChange(on ? values.filter((v) => v !== o.value) : [...values, o.value])}
+              style={[chipStyles.chip, { borderColor: on ? c.accent : c.borderInput, backgroundColor: on ? c.accent : c.surfaceRaised }]}
+            >
+              <Text variant="sm" color={on ? 'onAccent' : 'text'} style={{ fontFamily: 'Inter_600SemiBold' }}>{o.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {hint ? <Text variant="xs" color="textMuted">{hint}</Text> : null}
+    </View>
+  );
+}

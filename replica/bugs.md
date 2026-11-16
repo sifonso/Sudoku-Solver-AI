@@ -2,7 +2,7 @@
 
 Gefunden mit der Testsuite am 2026-11-16 (Build e649836 bis b014bd4). Fehler aus den Durchstich-Läufen davor stehen in `build-log.md`.
 
-Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 8 (S2: 2, S3: 5, S4: 1).
+Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 9 (S2: 2, S3: 6, S4: 1).
 
 ### BUG-001: Checkbox meldet ihren Zustand nicht, solange sie nicht angehakt ist
 
@@ -126,6 +126,17 @@ Expected: S24 öffnet sich.
 Actual: Die App bleibt auf dem Plan. Für Rollen ausgeblendete Reiter waren mit `href: null` konfiguriert; damit ist die Route nicht nur unsichtbar, sondern unerreichbar.
 Evidence: Screenshot zu F07-H2 (Plan statt Tausch), Regressionstest F07-E0.
 Status: fixed in 52c27bf (nur die Schaltfläche in der Tab-Leiste wird ausgeblendet, `src/app/(app)/(tabs)/_layout.tsx`)
+
+### BUG-009: Mehrfachauswahl hat eine Listen-Rolle ohne Listeneinträge
+
+- Severity: S3
+- Flow / case: F08 / A11Y-S13/S14
+- Screen: S14 (Schichttypen, Wochentage)
+
+Expected: Gruppe von Checkboxen mit Namen (role group).
+Actual: Container mit role list, Kinder sind checkboxes. axe meldet `aria-required-children` (critical), 2 Treffer.
+Evidence: Test A11Y-S13/S14 rot.
+Status: fixed in TASKFIX (`role="group"`, `src/ui/Navigation.tsx`)
 
 ## Zu prüfen (nicht reproduziert)
 

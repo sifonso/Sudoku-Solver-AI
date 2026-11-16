@@ -27,7 +27,10 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-D
 | S22 Urlaub beantragen | 2026-11-16 | fertig | Feiertage je Bundesland | „0 Tage“ bei Anträgen im Folgejahr (BUG-005) |
 | S23 Krank melden | 2026-11-16 | fertig | – | Mitteilung nannte „Krankmeldung“ (BUG-007, Migration) |
 | S24 Schichttausch | 2026-11-16 | fertig | Angebot zurückziehen; Ablauf-Job | Chef kam über „Mehr“ nicht hin (BUG-008, Tab-Konfiguration) |
-| S06, S11–S20, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
+| S13 Aufgaben | 2026-11-16 | fertig | Aufgaben-Log S15 | – |
+| S14 Aufgabe anlegen | 2026-11-16 | fertig | Fälligkeitszeit | Mehrfachauswahl brauchte role group (BUG-009) |
+| S21 (Aufgaben) | 2026-11-16 | Checkliste fertig | Offline-Abhaken | Karte war für Screenreader ein einziges Element; Checkboxen wären auf iOS/Android nicht einzeln erreichbar gewesen |
+| S06, S11, S12, S15–S20, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
 
 ## Technik, die nicht offensichtlich war
 

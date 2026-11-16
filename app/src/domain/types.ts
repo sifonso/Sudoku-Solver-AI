@@ -140,3 +140,25 @@ export interface SwapView {
   expiresAt: string | null;
   createdAt: string;
 }
+
+export interface Task {
+  id: string;
+  tenantId: string;
+  title: string;
+  description: string | null;
+  kind: 'standard' | 'special';
+  assignmentId: string | null; // nur Sonderaufgabe
+  shiftTypeIds: string[]; // nur Standardaufgabe
+  weekdays: number[] | null; // null = jeden Tag der Schicht
+  priority: 0 | 1 | 2;
+  deletedAt: string | null;
+  completionCount: number;
+}
+
+export interface TaskCompletion {
+  id: string;
+  taskId: string;
+  shiftId: string;
+  memberId: string;
+  completedAt: string;
+}

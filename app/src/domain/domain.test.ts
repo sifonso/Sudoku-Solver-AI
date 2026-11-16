@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { checkAssignment } from './rules.ts';
+import { tasksForShift } from './tasks.ts';
 import { addDays, formatRange, parseGermanDate, workdaysBetween, hoursBetween, isoWeekday, localDate, localTime, shiftBounds, startOfWeek, zonedToUtc } from './time.ts';
 import type { Assignment, Member, Tenant } from './types.ts';
 
@@ -86,4 +87,18 @@ test('Arbeitstage, Datumseingabe, Zeitraum-Text', () => {
   assert.equal(parseGermanDate('2026-12-01'), null);
   assert.equal(formatRange('2026-11-20', '2026-11-21'), '20.–21.11.2026');
   assert.equal(formatRange('2026-11-30', '2026-12-02'), '30.11.–02.12.2026');
+});
+
+test('Aufgaben pro Schicht: Typ, Wochentag, Sonderaufgabe, gelöscht, Reihenfolge', () => {
+  const base = { tenantId: 't', description: null, deletedAt: null, completionCount: 0 };
+  const tasks = [
+    { ...base, id: 'a', title: 'Kasse zählen', kind: 'standard' as const, assignmentId: null, shiftTypeIds: ['frueh', 'spaet'], weekdays: null, priority: 1 as const },
+    { ...base, id: 'b', title: 'Kühlung reinigen', kind: 'standard' as const, assignmentId: null, shiftTypeIds: ['spaet'], weekdays: [5], priority: 2 as const },
+    { ...base, id: 'c', title: 'Lieferung annehmen', kind: 'special' as const, assignmentId: 'as1', shiftTypeIds: [], weekdays: null, priority: 1 as const },
+    { ...base, id: 'd', title: 'Alt', kind: 'standard' as const, assignmentId: null, shiftTypeIds: ['spaet'], weekdays: null, priority: 1 as const, deletedAt: 'x' },
+  ];
+  const friday = { id: 's1', shiftTypeId: 'spaet', date: '2026-11-20' };
+  const monday = { id: 's2', shiftTypeId: 'spaet', date: '2026-11-16' };
+  assert.deepEqual(tasksForShift(tasks, friday, [{ id: 'as1', shiftId: 's1' }]).map((t) => t.id), ['b', 'a', 'c']);
+  assert.deepEqual(tasksForShift(tasks, monday, [{ id: 'as9', shiftId: 's2' }]).map((t) => t.id), ['a']);
 });

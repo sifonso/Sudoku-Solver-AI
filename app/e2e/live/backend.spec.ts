@@ -156,6 +156,24 @@ test('LIVE-05c Abwesenheiten: neutrale Mitteilung, Entscheiden, Sperre, Zurückz
   expect((await u.B.c.rpc('cancel_absence', { p_absence_id: w.data })).error).toBeNull();
 });
 
+test('LIVE-05e Aufgaben: nur Planer legen an, Abhaken idempotent, Sonderaufgabe benachrichtigt', async () => {
+  const asg = await u.B.c.from('assignments').select('id, shift_id, shifts(shift_type_id)').eq('member_id', memberB).limit(1).single();
+  const stId = (asg.data as unknown as { shifts: { shift_type_id: string } }).shifts.shift_type_id;
+  const t = await u.A.c.from('tasks').insert({ tenant_id: tenantId, title: 'Kasse', kind: 'standard' }).select('id').single();
+  expect(t.error).toBeNull();
+  expect((await u.A.c.from('task_shift_types').insert({ task_id: t.data!.id, shift_type_id: stId, tenant_id: tenantId })).error).toBeNull();
+  expect((await u.B.c.from('tasks').insert({ tenant_id: tenantId, title: 'X', kind: 'standard' })).error?.code).toBe('42501');
+  const id1 = crypto.randomUUID();
+  for (const id of [id1, id1, crypto.randomUUID()]) {
+    expect((await u.B.c.rpc('complete_task', { p_id: id, p_task_id: t.data!.id, p_shift_id: asg.data!.shift_id, p_completed_at: new Date().toISOString() })).error).toBeNull();
+  }
+  expect((await u.B.c.from('task_completions').select('id').eq('task_id', t.data!.id)).data).toHaveLength(1);
+  expect((await u.C.c.rpc('complete_task', { p_id: crypto.randomUUID(), p_task_id: t.data!.id, p_shift_id: asg.data!.shift_id, p_completed_at: new Date().toISOString() })).error?.code).toBe('42501');
+  expect((await u.A.c.from('tasks').insert({ tenant_id: tenantId, title: 'Lieferung prüfen', kind: 'special', assignment_id: asg.data!.id })).error).toBeNull();
+  const n = await u.B.c.from('notifications').select('title, body').eq('type', 'task_new');
+  expect(n.data).toEqual([{ title: 'Neue Aufgabe', body: 'Lieferung prüfen' }]);
+});
+
 test('LIVE-05d Schichttausch: anbieten, melden, wählen, freigeben', async () => {
   const asg = await u.B.c.from('assignments').select('id, shift_id').eq('member_id', memberB).limit(1).single();
   const offer = await u.B.c.rpc('offer_swap', { p_assignment_id: asg.data!.id });

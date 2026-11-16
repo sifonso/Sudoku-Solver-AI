@@ -18,6 +18,8 @@ export interface DB {
   assignments: Assignment[];
   absences: Absence[];
   vacationBlocks: VacationBlock[];
+  tasks: import('../domain/types').Task[];
+  completions: import('../domain/types').TaskCompletion[];
   swaps: { id: string; tenantId: string; assignmentId: string; offeredBy: string; status: import('../domain/types').SwapStatus; chosenMemberId: string | null; applicantIds: string[]; expiresAt: string | null; createdAt: string }[];
   notifications: import('../domain/types').AppNotification[];
 }
@@ -84,6 +86,12 @@ export function seed(now: number = Date.now()): DB {
   return {
     users: DEMO_USERS.map((u) => ({ id: u.id, email: u.email, password: DEMO_PASSWORD })),
     tenants: [tenant], members, qualifications: [q], shiftTypes, shifts, assignments, absences, vacationBlocks, notifications: [],
+    tasks: [
+      { id: 'tk-kasse', tenantId: T, title: 'Kasse zählen und Bericht ablegen', description: null, kind: 'standard', assignmentId: null, shiftTypeIds: ['st-frueh', 'st-spaet'], weekdays: null, priority: 2, deletedAt: null, completionCount: 0 },
+      { id: 'tk-kuehl', tenantId: T, title: 'Kühlvitrine auswischen', description: 'Innen und Dichtungen, danach Temperatur prüfen.', kind: 'standard', assignmentId: null, shiftTypeIds: ['st-spaet'], weekdays: [3, 6], priority: 1, deletedAt: null, completionCount: 0 },
+      { id: 'tk-terrasse', tenantId: T, title: 'Terrassenmöbel abdecken', description: null, kind: 'standard', assignmentId: null, shiftTypeIds: ['st-spaet'], weekdays: null, priority: 0, deletedAt: '2026-10-01T00:00:00Z', completionCount: 0 },
+    ],
+    completions: [],
     // Lena bietet ihre Spätschicht am Donnerstag dieser Woche zum Tausch an.
     swaps: [{ id: 'sw-lena', tenantId: T, assignmentId: `a-s-st-spaet-${addDays(week, 3)}-m-lena`, offeredBy: 'm-lena', status: 'open', chosenMemberId: null, applicantIds: [], expiresAt: null, createdAt: new Date(now - 3_600_000).toISOString() }],
   };

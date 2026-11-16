@@ -6,9 +6,9 @@ import { createClient, processLock, type PostgrestError } from '@supabase/supaba
 import { AppState, Platform } from 'react-native';
 import { addDays, isoWeekday, shiftBounds } from '../domain/time';
 import type {
-  Absence, VacationBlock, SwapView, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, Task, TaskCompletion, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
-import { ApiError, type Api, type Membership, type MyShift, type PendingSignup } from './api';
+import { ApiError, newId, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { DEFAULT_SHIFT_TYPES } from './defaults';
 
 type Row = Record<string, any>;
@@ -46,6 +46,13 @@ const toAbsence = (r: Row): Absence => ({
   status: r.status, comment: r.comment ?? null, createdAt: r.created_at,
 });
 const toBlock = (r: Row): VacationBlock => ({ id: r.id, tenantId: r.tenant_id, startDate: r.start_date, endDate: r.end_date, reason: r.reason ?? null });
+const toTask = (r: Row): Task => ({
+  id: r.id, tenantId: r.tenant_id, title: r.title, description: r.description ?? null, kind: r.kind,
+  assignmentId: r.assignment_id ?? null, shiftTypeIds: (r.task_shift_types ?? []).map((x: Row) => x.shift_type_id),
+  weekdays: r.weekdays ?? null, priority: r.priority, deletedAt: r.deleted_at ?? null,
+  completionCount: r.task_completions?.[0]?.count ?? 0,
+});
+const toCompletion = (r: Row): TaskCompletion => ({ id: r.id, taskId: r.task_id, shiftId: r.shift_id, memberId: r.member_id, completedAt: r.completed_at });
 const toNotification = (r: Row): AppNotification => ({
   id: r.id, tenantId: r.tenant_id, memberId: r.member_id, type: r.type, title: r.title, body: r.body,
   data: r.data ?? {}, readAt: r.read_at, createdAt: r.created_at,
@@ -377,6 +384,43 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
     async decideSwap(swapId, memberId, approve) {
       return (await q(sb.rpc('decide_swap', { p_swap_id: swapId, p_member_id: memberId, p_approve: approve }))) as 'approved' | 'pending_approval' | 'rejected';
+    },
+    async listTasks(tenantId) {
+      const rows = await q(sb.from('tasks').select('*, task_shift_types(shift_type_id), task_completions(count)')
+        .eq('tenant_id', tenantId).order('created_at'));
+      return (rows as Row[]).map(toTask);
+    },
+    async saveTask(input) {
+      const row: Row = {
+        tenant_id: input.tenantId, title: input.title, description: input.description, kind: input.kind,
+        assignment_id: input.assignmentId, weekdays: input.weekdays, priority: input.priority,
+      };
+      const r = input.id
+        ? await q(sb.from('tasks').update(row).eq('id', input.id).select('*').single())
+        : await q(sb.from('tasks').insert(row).select('*').single());
+      const id = (r as Row).id as string;
+      if (input.kind === 'standard') {
+        await q(sb.from('task_shift_types').delete().eq('task_id', id));
+        if (input.shiftTypeIds.length) {
+          await q(sb.from('task_shift_types').insert(input.shiftTypeIds.map((st) => ({ task_id: id, shift_type_id: st, tenant_id: input.tenantId }))));
+        }
+      }
+      return toTask({ ...(r as Row), task_shift_types: input.shiftTypeIds.map((shift_type_id) => ({ shift_type_id })) });
+    },
+    async setTaskDeleted(taskId, deleted) {
+      const r = await q(sb.from('tasks').update({ deleted_at: deleted ? new Date().toISOString() : null }).eq('id', taskId).select('id'));
+      if (!(r as Row[]).length) throw new ApiError('forbidden');
+    },
+    async listCompletions(_tenantId, shiftIds) {
+      if (!shiftIds.length) return [];
+      const rows = await q(sb.from('task_completions').select('*').in('shift_id', shiftIds));
+      return (rows as Row[]).map(toCompletion);
+    },
+    async completeTask(taskId, shiftId) {
+      await q(sb.rpc('complete_task', { p_id: newId(), p_task_id: taskId, p_shift_id: shiftId, p_completed_at: new Date().toISOString() }));
+    },
+    async uncompleteTask(completionId) {
+      await q(sb.from('task_completions').delete().eq('id', completionId));
     },
     async markNotificationsRead(ids) {
       if (!ids.length) return;

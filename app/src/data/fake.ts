@@ -450,6 +450,58 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       if (w.status !== 'open' && w.status !== 'pending_approval') throw new ApiError('already_decided');
       throw new ApiError('forbidden');
     },
+    async listTasks(tenantId) {
+      await wait();
+      me(tenantId);
+      return db.tasks.filter((t) => t.tenantId === tenantId)
+        .map((t) => ({ ...t, completionCount: db.completions.filter((c) => c.taskId === t.id).length }));
+    },
+    async saveTask(input) {
+      await wait();
+      const m = me(input.tenantId);
+      if (!(canPlan(m.role) || m.role === 'aufgaben_manager')) throw new ApiError('forbidden');
+      const existing = input.id ? db.tasks.find((t) => t.id === input.id) : undefined;
+      const t = { ...(existing ?? { deletedAt: null, completionCount: 0 }), ...input, id: input.id ?? uid() } as import('../domain/types').Task;
+      if (existing) Object.assign(existing, t); else db.tasks.push(t);
+      if (!existing && input.kind === 'special' && input.assignmentId) {
+        const a = db.assignments.find((x) => x.id === input.assignmentId);
+        if (a && a.memberId !== m.id) notify(input.tenantId, a.memberId, 'task_new', 'Neue Aufgabe', input.title, { task_id: t.id });
+      }
+      return { ...t };
+    },
+    async setTaskDeleted(taskId, deleted) {
+      await wait();
+      const t = db.tasks.find((x) => x.id === taskId);
+      if (!t) throw new ApiError('not_found');
+      const m = me(t.tenantId);
+      if (!(canPlan(m.role) || m.role === 'aufgaben_manager')) throw new ApiError('forbidden');
+      t.deletedAt = deleted ? new Date().toISOString() : null;
+    },
+    async listCompletions(tenantId, shiftIds) {
+      await wait();
+      me(tenantId);
+      return db.completions.filter((c) => shiftIds.includes(c.shiftId)).map((c) => ({ ...c }));
+    },
+    async completeTask(taskId, shiftId) {
+      await wait();
+      const shift = db.shifts.find((x) => x.id === shiftId);
+      if (!shift) throw new ApiError('not_found');
+      const m = me(shift.tenantId);
+      const onShift = db.assignments.some((a) => a.shiftId === shiftId && a.memberId === m.id);
+      if (!onShift && !(canPlan(m.role) || m.role === 'aufgaben_manager')) throw new ApiError('forbidden');
+      // unique (task_id, shift_id): zweites Abhaken ist wirkungslos
+      if (!db.completions.some((c) => c.taskId === taskId && c.shiftId === shiftId)) {
+        db.completions.push({ id: uid(), taskId, shiftId, memberId: m.id, completedAt: new Date().toISOString() });
+      }
+    },
+    async uncompleteTask(completionId) {
+      await wait();
+      const c = db.completions.find((x) => x.id === completionId);
+      if (!c) return;
+      const shift = db.shifts.find((x) => x.id === c.shiftId)!;
+      if (c.memberId !== me(shift.tenantId).id) throw new ApiError('forbidden');
+      db.completions = db.completions.filter((x) => x.id !== completionId);
+    },
     async markNotificationsRead(ids) {
       const s = requireSession();
       const mine = new Set(db.members.filter((m) => m.userId === s.userId).map((m) => m.id));

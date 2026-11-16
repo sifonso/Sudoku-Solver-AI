@@ -1,5 +1,5 @@
 import { Redirect, router } from 'expo-router';
-import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Settings2, X } from 'lucide-react-native';
+import { CalendarDays, ChevronLeft, ChevronRight, ClipboardPlus, Pencil, Settings2, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { canPlan } from '../../../data/api';
@@ -155,6 +155,10 @@ function Planner() {
         title={menu ? `${menu.m.displayName} · ${menu.slot.shiftType.name}` : ''}
         onClose={() => setMenu(null)}
         items={menu ? [
+          {
+            label: 'Sonderaufgabe', icon: ClipboardPlus,
+            onPress: () => router.push({ pathname: '/aufgabe-neu', params: { assignment: menu.a.id, who: menu.m.displayName } }),
+          },
           { label: 'Zeiten bearbeiten', icon: Pencil, onPress: () => router.push({ pathname: '/schicht/[id]', params: { id: menu.a.shiftId } }) },
           {
             label: 'Zuweisung löschen', icon: X, destructive: true,

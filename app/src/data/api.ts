@@ -2,7 +2,7 @@
 // Supabase-Umsetzung erfüllen dieselbe Signatur, Screens merken den Tausch nicht.
 // Namen folgen den RPCs/Tabellen aus replica/architecture.md.
 import type {
-  Absence, VacationBlock, SwapView, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, Task, TaskCompletion, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 
 export class ApiError extends Error {
@@ -96,6 +96,14 @@ export interface Api {
   /** Anbieter wählt Bewerber (approve egal) oder Planer gibt frei/lehnt ab. */
   decideSwap(swapId: string, memberId: string, approve: boolean): Promise<'approved' | 'pending_approval' | 'rejected'>;
 
+  // Aufgaben (Tabellen tasks/task_shift_types, rpc complete_task)
+  listTasks(tenantId: string): Promise<Task[]>;
+  saveTask(input: TaskInput): Promise<Task>;
+  setTaskDeleted(taskId: string, deleted: boolean): Promise<void>;
+  listCompletions(tenantId: string, shiftIds: string[]): Promise<TaskCompletion[]>;
+  completeTask(taskId: string, shiftId: string): Promise<void>;
+  uncompleteTask(completionId: string): Promise<void>;
+
   // Benachrichtigungen
   listNotifications(tenantId: string): Promise<AppNotification[]>;
   markNotificationsRead(ids: string[]): Promise<void>;
@@ -130,3 +138,22 @@ export const roleLabel: Record<Role, string> = {
 };
 
 export const canPlan = (r: Role) => r === 'chef' || r === 'planer';
+
+export interface TaskInput {
+  id?: string;
+  tenantId: string;
+  title: string;
+  description: string | null;
+  kind: 'standard' | 'special';
+  assignmentId: string | null;
+  shiftTypeIds: string[];
+  weekdays: number[] | null;
+  priority: 0 | 1 | 2;
+}
+
+/** Geräte-UUID für idempotente Uploads (task_completions.id). */
+export const newId = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });

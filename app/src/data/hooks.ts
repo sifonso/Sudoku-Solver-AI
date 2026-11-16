@@ -204,3 +204,34 @@ export function useSwapWarnings(shiftId: string | null, memberId: string | null,
     enabled: enabled && !!shiftId && !!memberId,
   });
 }
+
+export function useTasks() {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['tasks', tenant.id], queryFn: () => api.listTasks(tenant.id) });
+}
+
+export function useCompletions(shiftIds: string[]) {
+  const { tenant } = useActive();
+  return useQuery({
+    queryKey: ['completions', tenant.id, [...shiftIds].sort().join(',')],
+    queryFn: () => api.listCompletions(tenant.id, shiftIds),
+    enabled: shiftIds.length > 0,
+  });
+}
+
+function useInvalidateTasks() {
+  const qc = useQueryClient();
+  return () => {
+    for (const k of ['tasks', 'completions', 'notifications']) qc.invalidateQueries({ queryKey: [k] });
+  };
+}
+
+export function useTaskMutations() {
+  const inv = useInvalidateTasks();
+  return {
+    save: useMutation({ mutationFn: (i: import('./api').TaskInput) => api.saveTask(i), onSettled: inv }),
+    setDeleted: useMutation({ mutationFn: (i: { id: string; deleted: boolean }) => api.setTaskDeleted(i.id, i.deleted), onSettled: inv }),
+    complete: useMutation({ mutationFn: (i: { taskId: string; shiftId: string }) => api.completeTask(i.taskId, i.shiftId), onSettled: inv }),
+    uncomplete: useMutation({ mutationFn: (completionId: string) => api.uncompleteTask(completionId), onSettled: inv }),
+  };
+}

@@ -4,7 +4,7 @@ export { TextField, Checkbox } from './Field';
 export { Badge, Avatar, EmployeeChip, employmentLabel, type Employment } from './Badge';
 export { Pattern, type PatternKind } from './Pattern';
 export { Card, PageHeader, SectionHeader, ListRow, EmptyState } from './Layout';
-export { ChoiceChips, SegmentedControl, Tabs } from './Navigation';
+export { ChoiceChips, MultiChips, SegmentedControl, Tabs } from './Navigation';
 export { DayCard, ShiftBlock } from './Plan';
 export { ActionTile, type TilePair } from './Tiles';
 export { Banner, ActionSheet, SheetContent, Skeleton, type MenuItem } from './Feedback';
