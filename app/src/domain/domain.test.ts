@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { checkAssignment } from './rules.ts';
 import { tasksForShift } from './tasks.ts';
 import { checkEntry, dueSince } from './quick.ts';
+import { monthStats, statsCsv } from './stats.ts';
 import { addDays, formatRange, parseGermanDate, workdaysBetween, hoursBetween, isoWeekday, localDate, localTime, shiftBounds, startOfWeek, zonedToUtc } from './time.ts';
 import type { Assignment, Member, Tenant } from './types.ts';
 
@@ -125,4 +126,25 @@ test('Schnellaktion fällig nach Erinnerungszeit ohne Eintrag', () => {
   assert.equal(dueSince(a, [{ quickActionId: 'q', recordedAt: '2026-11-16T07:30:00Z' }], TZ, at('2026-11-16T09:00:00Z')), null);
   assert.equal(dueSince(a, [{ quickActionId: 'q', recordedAt: '2026-11-16T07:30:00Z' }], TZ, at('2026-11-16T15:30:00Z')), '16:00');
   assert.equal(dueSince(a, [], TZ, at('2026-11-16T06:00:00Z')), null);
+});
+
+test('Monatsstatistik: Stunden über Zeitumstellung, Krank-/Urlaubstage im Monat, CSV', () => {
+  const m = { ...member, id: 'm', monthlyHoursLimit: null, employmentType: 'vollzeit' as const, displayName: 'Mia "M" Müller' };
+  const n = shiftBounds('2026-10-24', '22:00', '06:00', TZ);
+  const e = shiftBounds('2026-10-31', '06:00', '14:00', TZ);
+  const nov = shiftBounds('2026-11-02', '06:00', '14:00', TZ);
+  const as = [n, e, nov].map((b, i) => ({ id: `a${i}`, tenantId: 't', shiftId: `s${i}`, memberId: 'm', ...b }));
+  const ab = [
+    { id: 'x', tenantId: 't', memberId: 'm', kind: 'sick' as const, startDate: '2026-10-30', endDate: '2026-11-02', status: 'approved' as const, comment: null, createdAt: '' },
+    { id: 'y', tenantId: 't', memberId: 'm', kind: 'vacation' as const, startDate: '2026-10-26', endDate: '2026-11-01', status: 'approved' as const, comment: null, createdAt: '' },
+    { id: 'z', tenantId: 't', memberId: 'm', kind: 'vacation' as const, startDate: '2026-10-05', endDate: '2026-10-06', status: 'requested' as const, comment: null, createdAt: '' },
+  ];
+  const [r] = monthStats({ timezone: TZ, workdays: [1, 2, 3, 4, 5] }, [m], as, ab, '2026-10-01');
+  assert.deepEqual({ shifts: r!.shifts, hours: r!.hours, sick: r!.sickDays, vac: r!.vacationDays }, { shifts: 2, hours: 17, sick: 2, vac: 5 }); // 26.–30.10. Mo–Fr
+  const [d] = monthStats({ timezone: TZ, workdays: [1, 2, 3, 4, 5] }, [m], as, ab, '2026-12-01');
+  assert.equal(d!.shifts, 0);
+  const csv = statsCsv([r!], '10/2026');
+  assert.ok(csv.startsWith('\uFEFFMonat;Name;'));
+  assert.ok(csv.includes('"Mia ""M"" Müller"'));
+  assert.ok(csv.includes(';17;2;5\r\n'));
 });

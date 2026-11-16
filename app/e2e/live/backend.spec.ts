@@ -216,6 +216,20 @@ test('LIVE-05f Schnellaktionen: Server bestimmt Abweichung, Pflichtfelder, Recht
   expect((await u.C.c.from('quick_action_entries').select('*')).data).toEqual([]);
 });
 
+test('LIVE-05g Statistik: nur Planer, Stunden aus Zuweisungen', async () => {
+  const r = await u.A.c.rpc('stats_month', { p_tenant: tenantId, p_month: '2026-11-01' });
+  expect(r.error).toBeNull();
+  type R = { member_id: string; shifts: number; hours: number; sick_days: number };
+  const rows = r.data as R[];
+  // LIVE-05d hat die Schicht der Mitarbeiterin auf den Chef getauscht
+  const chef = (await u.A.c.from('members').select('id').eq('user_id', u.A.id).single()).data!.id;
+  const a = rows.find((x) => x.member_id === chef);
+  expect(a?.shifts).toBeGreaterThanOrEqual(1);
+  expect(Number(a?.hours)).toBe(8 * (a?.shifts ?? 0));
+  expect(rows.find((x) => x.member_id === memberB)?.sick_days).toBe(2);
+  expect((await u.B.c.rpc('stats_month', { p_tenant: tenantId, p_month: '2026-11-01' })).error?.code).toBe('42501');
+});
+
 test('LIVE-06 Fremde Person sieht nichts', async () => {
   for (const tb of ['tenants', 'members', 'shifts', 'assignments', 'notifications', 'invitations', 'member_contacts', 'absences']) {
     const r = await u.C.c.from(tb).select('*');

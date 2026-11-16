@@ -91,3 +91,15 @@ test.describe('S07/S08 Personal', () => {
     await expect(chip(page, 'Sofia Reyes').first()).toBeVisible();
   });
 });
+
+test('P-E2 Statistik-Knopf reagiert beim ersten Tipp auch auf 390 px (BUG-013)', async ({ page }) => {
+  await loginAs(page, 'chef');
+  await openTab(page, 'Personal');
+  await expect(page.getByText('6 aktiv')).toBeVisible();
+  const before = await page.getByRole('button', { name: 'Statistik', exact: true }).boundingBox();
+  await page.getByRole('button', { name: 'Statistik', exact: true }).focus();
+  const after = await page.getByRole('button', { name: 'Statistik', exact: true }).boundingBox();
+  expect(after).toEqual(before);
+  await page.getByRole('button', { name: 'Statistik', exact: true }).click();
+  await expect(page).toHaveURL(/\/statistik$/);
+});

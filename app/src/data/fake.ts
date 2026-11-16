@@ -3,6 +3,7 @@
 // Wird durch die Supabase-Umsetzung ersetzt (/replica-backend).
 import { checkAssignment as runCheck } from '../domain/rules';
 import { checkEntry } from '../domain/quick';
+import { monthStats } from '../domain/stats';
 import { addDays, formatDate, isoWeekday, localTime, overlaps, shiftBounds, weekdayShort } from '../domain/time';
 import type { Absence } from '../domain/types';
 import type { Assignment, Member, PlanSlot, Session, Shift } from '../domain/types';
@@ -556,6 +557,12 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       const e = { id: uid(), quickActionId, memberId: m.id, values: { ...values }, outOfRange: r.outOfRange.length > 0, recordedAt: new Date().toISOString() };
       db.quickEntries.push(e);
       return { ...e };
+    },
+    async statsMonth(tenantId, month) {
+      await wait();
+      requirePlanner(tenantId);
+      return monthStats(tenantOf(tenantId), db.members.filter((m) => m.tenantId === tenantId),
+        db.assignments.filter((a) => a.tenantId === tenantId), db.absences.filter((a) => a.tenantId === tenantId), month);
     },
     async markNotificationsRead(ids) {
       const s = requireSession();

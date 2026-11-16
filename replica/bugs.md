@@ -2,7 +2,7 @@
 
 Gefunden mit der Testsuite am 2026-11-16 (Build e649836 bis b014bd4). Fehler aus den Durchstich-Läufen davor stehen in `build-log.md`.
 
-Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 12 (S2: 2, S3: 9, S4: 1).
+Offen: S1 0 · S2 0 · S3 0 · S4 0. Behoben: 13 (S2: 3, S3: 9, S4: 1).
 
 ### BUG-001: Checkbox meldet ihren Zustand nicht, solange sie nicht angehakt ist
 
@@ -171,6 +171,21 @@ Expected: Titel lesbar, Aktionen notfalls in der nächsten Zeile.
 Actual: Titel „Kühlung“ stand senkrecht, ein Buchstabe pro Zeile.
 Evidence: Screenshot zu F09-H4 (Telefon).
 Status: fixed in 10d1f19 (Mindestbreite und Umbruch in `ListRow`; Icon-Knöpfe in S19); Test prüft Titelbreite
+
+### BUG-013: Erster Tipp auf einen Knopf geht verloren, wenn er knapp in die Zeile passt
+
+- Severity: S2
+- Flow / case: F10 / P-E2
+- Screen: S07 „Statistik“ bei 390 px (betrifft jeden Button mit Rahmen am Zeilenende)
+
+Steps
+1. Als Chef Personal öffnen (390 px breit)
+2. „Statistik“ einmal antippen
+
+Expected: S11 öffnet sich.
+Actual: Nichts passiert, erst der zweite Tipp wirkt. Beim Drücken bekam der Knopf den Fokus, der Rahmen wuchs von 1 auf 2 px, der Knopf brach in die nächste Zeile um und das Loslassen landete daneben. Kein History-Aufruf protokolliert.
+Evidence: Debug-Lauf mit `history.pushState`-Spion; Bounding-Box vor/nach Fokus unterschiedlich.
+Status: fixed in STATSFIX (Fokusring als Outline ohne Layout-Änderung, `src/ui/Button.tsx`; Eingabefeld gleicht Rahmen über Padding aus); Regressionstest P-E2 vergleicht Bounding-Box
 
 ## Zu prüfen (nicht reproduziert)
 

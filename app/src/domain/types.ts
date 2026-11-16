@@ -205,3 +205,14 @@ export interface QuickEntry {
   outOfRange: boolean;
   recordedAt: string;
 }
+
+export interface StatRow {
+  memberId: string;
+  displayName: string;
+  initials: string;
+  employmentType: Employment;
+  shifts: number;
+  hours: number;
+  sickDays: number;
+  vacationDays: number;
+}

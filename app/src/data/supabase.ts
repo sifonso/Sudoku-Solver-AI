@@ -6,7 +6,7 @@ import { createClient, processLock, type PostgrestError } from '@supabase/supaba
 import { AppState, Platform } from 'react-native';
 import { addDays, isoWeekday, shiftBounds } from '../domain/time';
 import type {
-  Absence, VacationBlock, SwapView, Task, TaskCompletion, QuickAction, QuickEntry, QuickFolder, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, Task, TaskCompletion, QuickAction, QuickEntry, QuickFolder, StatRow, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 import { ApiError, PAIR_HEX, newId, pairOfHex, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { DEFAULT_SHIFT_TYPES } from './defaults';
@@ -475,6 +475,13 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         recorded_at: new Date().toISOString(),
       }, { onConflict: 'id', ignoreDuplicates: true }).select('*').single());
       return toEntry(r as Row);
+    },
+    async statsMonth(tenantId, month) {
+      const rows = await q(sb.rpc('stats_month', { p_tenant: tenantId, p_month: month }));
+      return ((rows ?? []) as Row[]).map((r): StatRow => ({
+        memberId: r.member_id, displayName: r.display_name, initials: r.initials, employmentType: r.employment_type,
+        shifts: Number(r.shifts), hours: Number(r.hours), sickDays: Number(r.sick_days), vacationDays: Number(r.vacation_days),
+      }));
     },
     async markNotificationsRead(ids) {
       if (!ids.length) return;

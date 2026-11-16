@@ -6,7 +6,7 @@ Umgebungen:
 - **live:** Supabase-Projekt `afrgpfjslsewdkipqcvi`. Aufruf: `npm run test:live` mit `SB_URL`, `SB_PUB` und `SB_SECRET`.
 - **domain:** Zeit- und Regellogik ohne UI. Aufruf: `npm run test:domain`.
 
-Ergebnis: e2e 62/62 (31 Fälle × 2 Breiten), live 7/7, domain 9/9. Jeder e2e-Test schlägt fehl bei Konsolenfehlern, Seitenfehlern oder 5xx-Antworten.
+Ergebnis (Stand M2): e2e 148/148 (74 Fälle × 2 Breiten), live 13/13, domain 14/14. Jeder e2e-Test schlägt fehl bei Konsolenfehlern, Seitenfehlern oder 5xx-Antworten.
 
 Spalte „auto“:
 - **e2e / live / domain:** automatisiert in der jeweiligen Suite.
@@ -60,7 +60,19 @@ Spalte „auto“:
 | A11Y-* | S01, S02, S03, S05, S21, S25, Mehr | axe WCAG 2.1 AA | | 0 Verstöße | e2e | pass (nach BUG-001–003) |
 | SR-1 | alle gebauten | Screenreader | VoiceOver/TalkBack | sinnvolle Namen, Reihenfolge | manuell | offen (kein Gerät hier) |
 
-## Noch nicht gebaute Flows
+## Meilenstein 2 (eigene Spec-Dateien)
+
+| Spec | Flow | Fälle |
+| --- | --- | --- |
+| `e2e/s07-personal.spec.ts` | Personal, Einladen, Bearbeiten | P-H1–H5, P-N1–N2, P-E1–E2 |
+| `e2e/f05-f06-absences.spec.ts` | F05 Urlaub, F06 Krankmeldung | F05-H1, E1, E2, N1, N2; F06-H1, N1; A11Y |
+| `e2e/f07-swap.spec.ts` | F07 Schichttausch | F07-E0, H1, H2, N1, E1; A11Y |
+| `e2e/f08-tasks.spec.ts` | F08 Aufgaben | F08-H1–H4, N1; A11Y |
+| `e2e/f09-quick.spec.ts` | F09 Schnellaktionen | F09-H1–H4, E1, E2, N1; A11Y |
+| `e2e/f10-stats.spec.ts` | F10 Statistik | F10-H1–H3 (inkl. CSV-Inhalt); A11Y |
+| `e2e/live/backend.spec.ts` | alle gegen Supabase | LIVE-01 bis LIVE-07 inkl. 05b–05g |
+
+## Noch nicht gebaute Flows (Stand M1, teils inzwischen gebaut, siehe oben)
 
 | Flow | Fälle (Auswahl) | Stand |
 | --- | --- | --- |

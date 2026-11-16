@@ -2,7 +2,7 @@
 // Supabase-Umsetzung erfüllen dieselbe Signatur, Screens merken den Tausch nicht.
 // Namen folgen den RPCs/Tabellen aus replica/architecture.md.
 import type {
-  Absence, VacationBlock, SwapView, Task, TaskCompletion, QuickAction, QuickEntry, QuickFolder, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, SwapView, Task, TaskCompletion, QuickAction, QuickEntry, QuickFolder, StatRow, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 
 export class ApiError extends Error {
@@ -112,6 +112,9 @@ export interface Api {
   saveFolder(input: Omit<QuickFolder, 'id'> & { id?: string }): Promise<QuickFolder>;
   listEntries(tenantId: string, since: string, quickActionId?: string): Promise<QuickEntry[]>;
   addEntry(tenantId: string, quickActionId: string, values: Record<string, string>): Promise<QuickEntry>;
+
+  // Statistik (rpc stats_month; nur Chef/Planer)
+  statsMonth(tenantId: string, month: string): Promise<StatRow[]>;
 
   // Benachrichtigungen
   listNotifications(tenantId: string): Promise<AppNotification[]>;

@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 import { tokens, useTheme, type ColorRole } from '../theme';
 import { Text } from './Text';
 
@@ -13,6 +13,10 @@ const look: Record<Variant, { bg: ColorRole | null; fg: ColorRole; border: Color
   danger: { bg: 'danger', fg: 'onDanger', border: null },
   highlight: { bg: 'highlight', fg: 'onHighlight', border: null },
 };
+/** Fokusring ohne Layout-Änderung (Web: CSS outline; nativ meldet das System den Fokus selbst). */
+export const focusRing = (color: string) =>
+  (Platform.OS === 'web' ? { outlineColor: color, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 2 } : {}) as object;
+
 const heights: Record<Size, number> = {
   sm: tokens.size.buttonSm,
   md: tokens.size.buttonMd,
@@ -47,8 +51,11 @@ export function Button({ label, variant = 'primary', size = 'md', icon: Icon, lo
             minHeight: heights[size],
             paddingHorizontal: size === 'sm' ? 12 : 16,
             backgroundColor: v.bg ? c[v.bg] : 'transparent',
-            borderColor: focused ? c.focus : v.border ? c[v.border] : 'transparent',
-            borderWidth: focused ? 2 : v.border ? 1 : 0,
+            // Rahmenbreite bleibt beim Fokus gleich. Vorher wuchs sie 1 → 2 px, der Knopf brach um und
+            // der Tipp ging verloren (BUG-013). Fokus wird als Outline außerhalb gezeichnet.
+            borderColor: v.border ? c[v.border] : 'transparent',
+            borderWidth: v.border ? 1 : 0,
+            ...(focused ? focusRing(c.focus) : null),
             opacity: off ? 0.5 : state.pressed ? 0.85 : 1,
             alignSelf: fullWidth ? 'stretch' : 'flex-start',
           },

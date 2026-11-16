@@ -29,6 +29,8 @@ export function TextField({ label, hint, error, editable = true, style, onFocus,
             backgroundColor: editable ? c.surfaceRaised : c.surface,
             borderColor,
             borderWidth: focused || error ? 2 : 1,
+            // dickerer Rahmen nach innen ausgleichen, damit sich nichts verschiebt (BUG-013)
+            paddingHorizontal: focused || error ? 13 : 14,
           },
           style,
         ]}

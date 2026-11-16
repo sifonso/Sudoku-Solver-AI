@@ -266,3 +266,8 @@ export function useQuickMutations() {
     saveFolder: useMutation({ mutationFn: (i: Parameters<typeof api.saveFolder>[0]) => api.saveFolder(i), onSettled: inv }),
   };
 }
+
+export function useStatsMonth(month: string) {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['stats', tenant.id, month], queryFn: () => api.statsMonth(tenant.id, month) });
+}

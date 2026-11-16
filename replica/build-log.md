@@ -1,11 +1,11 @@
 # Build-Log
 
-Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-Datenschicht.
+Stand: 2026-11-16. Meilenstein 1 (Durchstich) und Meilenstein 2 (Pflicht-Screens) laut `architecture.md`. Datenschicht: Demo im Speicher oder Supabase (Projekt angebunden).
 
 ## Gesamtstand
 
-- Screens: 7 von 29 gebaut (S01, S02, S03, S04, S05, S21, S25), 22 als Stub mit Route.
-- Must-haves: 1 fertig, 14 teilweise, 21 offen (von 36).
+- Screens: 23 von 29 gebaut. Als Stub mit Route offen: S06 Schichttypen, S15 Aufgaben-Log, S26 Einstellungen, S27 Profil, S28 Abo, S29 Schicht-Detail.
+- Must-haves: 21 fertig, 11 teilweise, 4 offen (von 36). Stand nach Meilenstein 2.
 - Durchstich läuft durch: Chef meldet sich an → plant (Woche) → teilt Mira mit Warnungen ein → entfernt eine Zuweisung → Mira meldet sich an → sieht die neue Schicht und die Mitteilung. Geprüft per Playwright im Web-Build bei 390 px und 1440 px, hell und dunkel, ohne Konsolenfehler.
 - Push aufs Telefon ist noch nicht drin. Bis zum Backend erscheinen Mitteilungen in der App (Glocke, S25, Banner in S21).
 
@@ -35,7 +35,9 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-D
 | S18 Ordner | 2026-11-16 | fertig | – | – |
 | S19 Verwalten | 2026-11-16 | fertig | Sortieren per Ziehen | Titel in Listenzeilen gequetscht (BUG-012) |
 | S20 Heute | 2026-11-16 | fertig | – | – |
-| S06, S11, S12, S15, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
+| S11 Statistik | 2026-11-16 | fertig | PDF-Export | Statistik-Knopf brauchte auf 390 px zwei Tipps (BUG-013) |
+| S12 Statistik-Detail | 2026-11-16 | fertig | – | – |
+| S06, S15, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
 
 ## Technik, die nicht offensichtlich war
 
