@@ -44,7 +44,8 @@
     "export:web": "expo export -p web",
     "test:domain": "node --experimental-strip-types --no-warnings --test src/domain/domain.test.ts",
     "test:e2e": "playwright test --project=phone --project=desktop",
-    "test:live": "NODE_USE_ENV_PROXY=1 playwright test --project=live"
+    "test:live": "NODE_USE_ENV_PROXY=1 playwright test --project=live",
+    "test:load": "NODE_USE_ENV_PROXY=1 node scripts/load-test.cjs"
   },
   "private": true
 }

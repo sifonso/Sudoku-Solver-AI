@@ -187,6 +187,23 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
         memberAbsences: db.absences.filter((a) => a.memberId === memberId),
       });
     },
+    async checkAssignments(shiftId) {
+      const shift = db.shifts.find((s) => s.id === shiftId);
+      if (!shift) throw new ApiError('not_found');
+      requirePlanner(shift.tenantId);
+      await wait();
+      const out: Record<string, import('../domain/types').Warning[]> = {};
+      for (const member of db.members.filter((m) => m.tenantId === shift.tenantId && (m.status === 'active' || m.status === 'invited'))) {
+        if (db.assignments.some((a) => a.shiftId === shiftId && a.memberId === member.id)) continue;
+        out[member.id] = runCheck({
+          tenant: tenantOf(shift.tenantId), member, shift,
+          shiftType: db.shiftTypes.find((t) => t.id === shift.shiftTypeId) ?? null,
+          memberAssignments: db.assignments.filter((a) => a.memberId === member.id),
+          memberAbsences: db.absences.filter((a) => a.memberId === member.id),
+        });
+      }
+      return out;
+    },
     async assign(tenantId, shiftId, memberId) {
       await wait();
       const planner = requirePlanner(tenantId);

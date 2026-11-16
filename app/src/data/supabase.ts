@@ -262,6 +262,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const w = await q(sb.rpc('check_assignment', { p_shift_id: shiftId, p_member_id: memberId }));
       return ((w ?? []) as Row[]).map(toWarning);
     },
+    async checkAssignments(shiftId) {
+      const rows = (await q(sb.rpc('check_assignments', { p_shift_id: shiftId }))) as Row[];
+      return Object.fromEntries((rows ?? []).map((r) => [r.member_id as string, ((r.warnings ?? []) as Row[]).map(toWarning)]));
+    },
     async assign(tenantId, shiftId, memberId) {
       // start_at/end_at setzt der Trigger assignment_defaults aus der Schicht.
       const r = await q(sb.from('assignments').insert({ tenant_id: tenantId, shift_id: shiftId, member_id: memberId } as Row).select('*').single());

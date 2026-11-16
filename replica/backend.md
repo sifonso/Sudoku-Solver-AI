@@ -93,3 +93,20 @@ Zusätzlich lokal gegen Postgres 16 mit Supabase-Auth-Stub:
 ## Entscheidung 2026-11-16: keine Bezahlfunktion
 
 Die App wird teamintern genutzt. Migration `internal_use`: Tarif `internal` als Standard, keine Testphase (`trial_ends_at` leer), kein Personenlimit. Stripe, Abo-Screen und die Jobs `trial-expiry`, `stripe-seat-sync`, `purge-tenants` entfallen. S28 ist jetzt nur noch „Datenexport“.
+
+## Last: 40 Personen (2026-11-16)
+
+Gemessen gegen das Projekt mit einem Testbetrieb: 40 Personen, 3 Schichttypen, 448 Zuweisungen in 4 Wochen (`npm run test:load`, Median aus 3 Läufen, vom Cloud-Container über Proxy; auf dem Handy kommt die Mobilfunk-Latenz hinzu).
+
+| Abfrage | vorher | nachher |
+| --- | --- | --- |
+| Plan einer Woche (S03) | 366–402 ms | unverändert |
+| Mitarbeiterliste (S07) | 154–346 ms | unverändert |
+| Zuweisen-Liste (S05) | 40 Anfragen, 454–566 ms | 1 Anfrage (`check_assignments`), 165 ms |
+| Monatsstatistik (S11) | 150–154 ms | unverändert |
+| Mitteilungen (S25) | 153–167 ms | unverändert |
+
+Grenzen außerhalb der App, nicht selbst geprüft (Preisseite von hier nicht erreichbar):
+- Realtime: laut Supabase-Doku 200 gleichzeitige Verbindungen im Free-Plan. Die App nutzt Realtime noch nicht; Mitteilungen werden alle 15 s abgefragt, bei 40 Personen etwa 160 Anfragen pro Minute.
+- Free-Projekte werden nach etwa einer Woche Inaktivität pausiert und haben keine herunterladbaren Backups (Drittquellen). Bei täglicher Nutzung greift die Pause nicht; Backups sind trotzdem ein Grund für Pro.
+- E-Mail: eingebauter Versand 2 Mails/Stunde (Projekteinstellung `rate_limit_email_sent = 2`, selbst ausgelesen). 40 Einladungen brauchen eigenes SMTP.

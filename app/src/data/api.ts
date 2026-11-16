@@ -74,6 +74,8 @@ export interface Api {
   listPlan(tenantId: string, from: string, to: string): Promise<PlanSlot[]>;
   ensureShift(shiftTypeId: string, date: string): Promise<Shift>;
   checkAssignment(shiftId: string, memberId: string): Promise<Warning[]>;
+  /** Warnungen für alle Zuweisbaren in einem Aufruf (rpc check_assignments). Schon Eingeteilte fehlen. */
+  checkAssignments(shiftId: string): Promise<Record<string, Warning[]>>;
   assign(tenantId: string, shiftId: string, memberId: string): Promise<Assignment>;
   unassign(assignmentId: string): Promise<void>;
 

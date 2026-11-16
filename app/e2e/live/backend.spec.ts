@@ -107,6 +107,16 @@ test('LIVE-04 Zeitumstellung, Zuweisung, Mitteilung, Doppelbuchung', async () =>
 
   const notes = await u.B.c.from('notifications').select('title, body');
   expect(notes.data?.map((x) => x.title)).toContain('Neue Schicht');
+
+  // Sammelprüfung für S05: gleiche Warnungen wie Einzelprüfung, Eingeteilte fehlen, nur Planer
+  const batch = await u.A.c.rpc('check_assignments', { p_shift_id: mid.data });
+  expect(batch.error).toBeNull();
+  const forB = (batch.data as { member_id: string; warnings: { code: string }[] }[]).find((r) => r.member_id === memberB);
+  expect(forB?.warnings.map((w) => w.code)).toContain('overlap');
+  expect((batch.data as { member_id: string }[]).length).toBeGreaterThanOrEqual(1);
+  const inEarly = await u.A.c.rpc('check_assignments', { p_shift_id: e.data });
+  expect((inEarly.data as { member_id: string }[]).some((r) => r.member_id === memberB)).toBe(false);
+  expect((await u.B.c.rpc('check_assignments', { p_shift_id: e.data })).error?.code).toBe('42501');
 });
 
 test('LIVE-05 Mitarbeiterin: keine Planerrechte, keine fremden Kontakte', async () => {

@@ -32,15 +32,15 @@ export function useCandidates(shiftTypeId: string, date: string) {
     queryKey: ['candidates', tenant.id, shiftTypeId, date],
     queryFn: async () => {
       const shift = await api.ensureShift(shiftTypeId, date);
-      const [members, plan] = await Promise.all([api.listMembers(tenant.id), api.listPlan(tenant.id, date, date)]);
-      const assignedIds = new Set(plan.find((s) => s.shiftType.id === shiftTypeId)?.assignments.map((a) => a.memberId));
-      const rows = await Promise.all(
-        members.filter((m) => m.status === 'active' || m.status === 'invited').map(async (member) => ({
+      // Ein Aufruf für alle statt einer pro Person (Lasttest mit 40 Personen)
+      const [members, warningsById] = await Promise.all([api.listMembers(tenant.id), api.checkAssignments(shift.id)]);
+      const rows = members
+        .filter((m) => m.status === 'active' || m.status === 'invited')
+        .map((member) => ({
           member,
-          assigned: assignedIds.has(member.id),
-          warnings: assignedIds.has(member.id) ? [] : await api.checkAssignment(shift.id, member.id),
-        })),
-      );
+          assigned: !(member.id in warningsById),
+          warnings: warningsById[member.id] ?? [],
+        }));
       // Freie ohne Warnung zuerst, dann nach Anzahl Warnungen, bereits Eingeteilte ans Ende
       rows.sort((a, b) =>
         Number(a.assigned) - Number(b.assigned) ||
