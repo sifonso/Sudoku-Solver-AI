@@ -107,3 +107,31 @@ export function formatDate(date: string): string {
 export function today(tz: string, now: number = Date.now()): string {
   return localDate(new Date(now).toISOString(), tz);
 }
+
+/** Arbeitstage im Zeitraum (beide Enden eingeschlossen) nach den Arbeitstagen des Betriebs. Feiertage fehlen noch. */
+export function workdaysBetween(start: string, end: string, workdays: number[]): number {
+  let n = 0;
+  for (let d = start; d <= end; d = addDays(d, 1)) if (workdays.includes(isoWeekday(d))) n++;
+  return n;
+}
+
+/** '16.11.2026' oder '16.11.26' -> '2026-11-16'; ungültig -> null. */
+export function parseGermanDate(input: string): string | null {
+  const m = input.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
+  if (!m) return null;
+  const d = Number(m[1]), mo = Number(m[2]);
+  const y = m[3]!.length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+  const t = new Date(Date.UTC(y, mo - 1, d));
+  if (t.getUTCFullYear() !== y || t.getUTCMonth() !== mo - 1 || t.getUTCDate() !== d) return null;
+  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/** Zeitraum als Text: '20.–21.11.2026' oder '30.11.–02.12.2026'. */
+export function formatRange(start: string, end: string): string {
+  if (start === end) return formatDate(start);
+  const [ys, ms] = start.split('-');
+  const [ye, me] = end.split('-');
+  if (ys === ye && ms === me) return `${start.slice(8)}.–${formatDate(end)}`;
+  if (ys === ye) return `${formatDate(start).slice(0, 6)}–${formatDate(end)}`;
+  return `${formatDate(start)}–${formatDate(end)}`;
+}

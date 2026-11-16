@@ -46,19 +46,27 @@ export function ListRow({ title, subtitle, leading, trailing, onPress }: {
   title: string; subtitle?: string; leading?: ReactNode; trailing?: ReactNode; onPress?: () => void;
 }) {
   const { c } = useTheme();
-  return (
-    <Pressable
-      disabled={!onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, { borderBottomColor: c.border, backgroundColor: pressed ? c.surface : 'transparent' }]}
-    >
+  const content = (
+    <>
       {leading}
       <View style={styles.rowText}>
         <Text variant="base" style={styles.semibold}>{title}</Text>
         {subtitle ? <Text variant="sm" color="textMuted">{subtitle}</Text> : null}
       </View>
       {trailing}
+    </>
+  );
+  // Ohne Aktion eine einfache Zeile: ein deaktivierter Pressable würde aria-disabled an Knöpfe im trailing vererben.
+  if (!onPress) {
+    return <View style={[styles.row, { borderBottomColor: c.border }]}>{content}</View>;
+  }
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, { borderBottomColor: c.border, backgroundColor: pressed ? c.surface : 'transparent' }]}
+    >
+      {content}
     </Pressable>
   );
 }

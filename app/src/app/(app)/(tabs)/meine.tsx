@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { CalendarCheck, Thermometer } from 'lucide-react-native';
+import { CalendarCheck, Palmtree, Stethoscope, Thermometer } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useMyShifts, useNotifications } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
@@ -76,7 +76,11 @@ export default function MyShiftsScreen() {
         </View>
       )}
 
-      <Button label="Schnellaktionen öffnen" variant="secondary" icon={Thermometer} onPress={() => router.push('/schnell')} />
+      <View style={styles.quick}>
+        <Button label="Krank melden" variant="secondary" icon={Stethoscope} onPress={() => router.push('/krankmelden')} />
+        <Button label="Urlaub beantragen" variant="secondary" icon={Palmtree} onPress={() => router.push('/urlaub-beantragen')} />
+        <Button label="Schnellaktionen" variant="secondary" icon={Thermometer} onPress={() => router.push('/schnell')} />
+      </View>
     </AppScreen>
   );
 }
@@ -86,4 +90,5 @@ const styles = StyleSheet.create({
   list: { gap: 12 },
   item: { gap: 6 },
   itemHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  quick: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { checkAssignment } from './rules.ts';
-import { addDays, hoursBetween, isoWeekday, localDate, localTime, shiftBounds, startOfWeek, zonedToUtc } from './time.ts';
+import { addDays, formatRange, parseGermanDate, workdaysBetween, hoursBetween, isoWeekday, localDate, localTime, shiftBounds, startOfWeek, zonedToUtc } from './time.ts';
 import type { Assignment, Member, Tenant } from './types.ts';
 
 const TZ = 'Europe/Berlin';
@@ -40,11 +40,11 @@ test('Wochenrechnung', () => {
 
 const tenant: Tenant = {
   id: 't', slug: 't', name: 'T', timezone: TZ, plan: 'trial', trialEndsAt: '', minRestHours: 11,
-  swapRequiresApproval: true, employeesSeeFullPlan: true,
+  swapRequiresApproval: true, employeesSeeFullPlan: true, workdays: [1, 2, 3, 4, 5],
 };
 const member: Member = {
   id: 'm', tenantId: 't', userId: null, displayName: 'M', initials: 'M', role: 'mitarbeiter',
-  employmentType: 'aushilfe', status: 'active', monthlyHoursLimit: 10, qualificationIds: [],
+  employmentType: 'aushilfe', status: 'active', monthlyHoursLimit: 10, vacationDaysPerYear: null, qualificationIds: [],
 };
 const night = shiftBounds('2026-10-24', '22:00', '06:00', TZ);
 const nightAssignment: Assignment = { id: 'a1', tenantId: 't', shiftId: 's-night', memberId: 'm', ...night };
@@ -64,7 +64,7 @@ test('Überschneidung und Abwesenheit', () => {
   const w = checkAssignment({
     tenant, member: { ...member, monthlyHoursLimit: null }, shift: { id: 'x', ...night }, shiftType: null,
     memberAssignments: [{ ...nightAssignment, shiftId: 'other' }],
-    memberAbsences: [{ id: 'ab', tenantId: 't', memberId: 'm', kind: 'sick', startDate: '2026-10-24', endDate: '2026-10-24', status: 'approved' }],
+    memberAbsences: [{ id: 'ab', tenantId: 't', memberId: 'm', kind: 'sick', startDate: '2026-10-24', endDate: '2026-10-24', status: 'approved', comment: null, createdAt: '' }],
   });
   assert.deepEqual(w.map((x) => x.code).sort(), ['absent', 'overlap']);
 });
@@ -75,4 +75,15 @@ test('Keine Warnung bei passender Zuweisung', () => {
     memberAssignments: [], memberAbsences: [],
   });
   assert.deepEqual(w, []);
+});
+
+test('Arbeitstage, Datumseingabe, Zeitraum-Text', () => {
+  assert.equal(workdaysBetween('2026-11-16', '2026-11-22', [1, 2, 3, 4, 5]), 5);
+  assert.equal(workdaysBetween('2026-11-21', '2026-11-22', [1, 2, 3, 4, 5]), 0);
+  assert.equal(parseGermanDate('1.12.26'), '2026-12-01');
+  assert.equal(parseGermanDate('29.02.2027'), null);
+  assert.equal(parseGermanDate('29.02.2028'), '2028-02-29');
+  assert.equal(parseGermanDate('2026-12-01'), null);
+  assert.equal(formatRange('2026-11-20', '2026-11-21'), '20.–21.11.2026');
+  assert.equal(formatRange('2026-11-30', '2026-12-02'), '30.11.–02.12.2026');
 });

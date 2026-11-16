@@ -130,6 +130,32 @@ test('LIVE-05b Team ändern: nur Chef, letzter Chef bleibt Chef', async () => {
   expect(lock.error?.message).toContain('last_chef');
 });
 
+test('LIVE-05c Abwesenheiten: neutrale Mitteilung, Entscheiden, Sperre, Zurückziehen', async () => {
+  const sick = await u.B.c.rpc('report_sick', { p_tenant: tenantId, p_start: '2026-11-20', p_end: '2026-11-21' });
+  expect(sick.error).toBeNull();
+  const dup = await u.B.c.rpc('report_sick', { p_tenant: tenantId, p_start: '2026-11-21' });
+  expect(dup.error?.message).toContain('no_overlapping_absence');
+  const note = await u.A.c.from('notifications').select('title, body').eq('type', 'absence_new');
+  expect(note.data).toEqual([{ title: 'Neue Abwesenheit', body: 'Bitte den Plan prüfen.' }]);
+  const seen = await u.A.c.from('absences').select('kind').eq('id', sick.data as string);
+  expect(seen.data).toEqual([{ kind: 'sick' }]);
+
+  const v = await u.B.c.rpc('request_vacation', { p_tenant: tenantId, p_start: '2027-03-01', p_end: '2027-03-05', p_comment: 'Test' });
+  expect(v.error).toBeNull();
+  expect((await u.B.c.rpc('decide_absence', { p_absence_id: v.data, p_approve: true })).error?.code).toBe('42501');
+  expect((await u.A.c.rpc('decide_absence', { p_absence_id: v.data, p_approve: true })).error).toBeNull();
+  expect((await u.B.c.rpc('cancel_absence', { p_absence_id: v.data })).error?.message).toContain('already_decided');
+
+  expect((await u.A.c.from('vacation_blocks').insert({ tenant_id: tenantId, start_date: '2027-07-01', end_date: '2027-07-15', reason: 'Test' })).error).toBeNull();
+  expect((await u.B.c.from('vacation_blocks').insert({ tenant_id: tenantId, start_date: '2027-08-01', end_date: '2027-08-02' })).error?.code).toBe('42501');
+  const blocked = await u.B.c.rpc('request_vacation', { p_tenant: tenantId, p_start: '2027-07-10', p_end: '2027-07-12', p_comment: null });
+  expect(blocked.error?.message).toContain('vacation_blocked');
+
+  const w = await u.B.c.rpc('request_vacation', { p_tenant: tenantId, p_start: '2027-05-03', p_end: '2027-05-07', p_comment: null });
+  expect((await u.A.c.rpc('cancel_absence', { p_absence_id: w.data })).error?.code).toBe('42501');
+  expect((await u.B.c.rpc('cancel_absence', { p_absence_id: w.data })).error).toBeNull();
+});
+
 test('LIVE-06 Fremde Person sieht nichts', async () => {
   for (const tb of ['tenants', 'members', 'shifts', 'assignments', 'notifications', 'invitations', 'member_contacts', 'absences']) {
     const r = await u.C.c.from(tb).select('*');
@@ -143,6 +169,7 @@ test('LIVE-07 Konto löschen: Mitarbeiterin archiviert, einziger Chef nur mit Be
   const after = await u.A.c.from('members').select('status, user_id').eq('id', memberB).single();
   expect(after.data).toEqual({ status: 'archived', user_id: null });
   const a1 = await u.A.c.functions.invoke('delete-account', { body: { confirm: true } });
+  if ((a1.error as { context?: Response })?.context?.status !== 409) console.log('A1', JSON.stringify(a1.data), await (a1.error as { context?: Response })?.context?.text?.());
   expect((a1.error as { context?: Response })?.context?.status).toBe(409);
   const a2 = await u.A.c.functions.invoke('delete-account', { body: { confirm: true, delete_tenants: true } });
   expect(a2.data?.tenants_deleted).toBe(1);

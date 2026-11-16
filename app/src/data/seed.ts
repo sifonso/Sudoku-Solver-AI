@@ -1,6 +1,6 @@
 // Demodaten für die Fake-Datenschicht. Namen und Betrieb sind erfunden.
 import { addDays, shiftBounds, startOfWeek, today } from '../domain/time';
-import type { Absence, Assignment, Member, Qualification, Shift, ShiftType, Tenant } from '../domain/types';
+import type { Absence, Assignment, Member, Qualification, Shift, ShiftType, Tenant, VacationBlock } from '../domain/types';
 
 export const DEMO_PASSWORD = 'demo1234';
 export const DEMO_USERS = [
@@ -17,6 +17,7 @@ export interface DB {
   shifts: Shift[];
   assignments: Assignment[];
   absences: Absence[];
+  vacationBlocks: VacationBlock[];
   notifications: import('../domain/types').AppNotification[];
 }
 
@@ -26,12 +27,13 @@ export function seed(now: number = Date.now()): DB {
   const tenant: Tenant = {
     id: T, slug: 'cafe-morgenrot', name: 'Café Morgenrot', timezone: tz, plan: 'trial',
     trialEndsAt: new Date(now + 10 * 86_400_000).toISOString(), minRestHours: 11,
-    swapRequiresApproval: true, employeesSeeFullPlan: true,
+    swapRequiresApproval: true, employeesSeeFullPlan: true, workdays: [1, 2, 3, 4, 5, 6],
   };
   const q = { id: 'q-erste-hilfe', tenantId: T, name: 'Ersthelfer' };
   const m = (id: string, displayName: string, initials: string, employmentType: Member['employmentType'],
     role: Member['role'] = 'mitarbeiter', userId: string | null = null, limit: number | null = null, quals: string[] = []): Member =>
-    ({ id, tenantId: T, userId, displayName, initials, role, employmentType, status: 'active', monthlyHoursLimit: limit, qualificationIds: quals });
+    ({ id, tenantId: T, userId, displayName, initials, role, employmentType, status: 'active', monthlyHoursLimit: limit,
+      vacationDaysPerYear: employmentType === 'vollzeit' ? 28 : employmentType === 'teilzeit' ? 20 : null, qualificationIds: quals });
   const members = [
     m('m-jana', 'Jana Wilke', 'JW', 'vollzeit', 'chef', 'u-chef', null, [q.id]),
     m('m-lena', 'Lena Kraus', 'LK', 'vollzeit'),
@@ -72,10 +74,14 @@ export function seed(now: number = Date.now()): DB {
     }
   }
   const absences: Absence[] = [
-    { id: 'ab-tom', tenantId: T, memberId: 'm-tom', kind: 'vacation', startDate: addDays(week, 5), endDate: addDays(week, 9), status: 'approved' },
+    { id: 'ab-tom', tenantId: T, memberId: 'm-tom', kind: 'vacation', startDate: addDays(week, 5), endDate: addDays(week, 9), status: 'approved', comment: null, createdAt: new Date(now - 7 * 86_400_000).toISOString() },
+    { id: 'ab-lena', tenantId: T, memberId: 'm-lena', kind: 'vacation', startDate: addDays(week, 21), endDate: addDays(week, 25), status: 'requested', comment: 'Hochzeit meiner Schwester', createdAt: new Date(now - 86_400_000).toISOString() },
+  ];
+  const vacationBlocks: VacationBlock[] = [
+    { id: 'vb-advent', tenantId: T, startDate: `${today(tz, now).slice(0, 4)}-12-14`, endDate: `${today(tz, now).slice(0, 4)}-12-24`, reason: 'Weihnachtsgeschäft' },
   ];
   return {
     users: DEMO_USERS.map((u) => ({ id: u.id, email: u.email, password: DEMO_PASSWORD })),
-    tenants: [tenant], members, qualifications: [q], shiftTypes, shifts, assignments, absences, notifications: [],
+    tenants: [tenant], members, qualifications: [q], shiftTypes, shifts, assignments, absences, vacationBlocks, notifications: [],
   };
 }

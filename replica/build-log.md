@@ -22,7 +22,11 @@ Stand: 2026-11-16. Meilenstein 1 (Durchstich) laut `architecture.md`, mit Fake-D
 | S25 Mitteilungen | 2026-11-16 | teilweise | Push (APNs/FCM), Einstellungen pro Typ | – |
 | S07 Personal | 2026-11-16 | fertig | Wochensoll pro Person | Nach „Zum Team“ hing per `replace` ein zweiter Tab-Navigator im Stapel; jetzt `back` |
 | S08 Mitarbeiter (+ Einladen) | 2026-11-16 | fertig | Qualifikationen, Verfügbarkeit (S27) | Letzter Chef konnte sich aussperren; jetzt DB-Trigger `keep_one_chef`. Eingeladene waren nicht einplanbar, Archivierte fielen aus dem Plan: beides korrigiert |
-| S06, S09–S20, S22–S24, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
+| S09 Krankmeldungen | 2026-11-16 | fertig | Push-Anfrage an mehrere Springer | – |
+| S10 Urlaub (Team) | 2026-11-16 | fertig | – | Knöpfe in Zeilen waren über aria-disabled blockiert (BUG-004) |
+| S22 Urlaub beantragen | 2026-11-16 | fertig | Feiertage je Bundesland | „0 Tage“ bei Anträgen im Folgejahr (BUG-005) |
+| S23 Krank melden | 2026-11-16 | fertig | – | Mitteilung nannte „Krankmeldung“ (BUG-007, Migration) |
+| S06, S11–S20, S24, S26–S29 | 2026-11-16 | Stub | alles; Route und Platzhalter mit Zweck vorhanden | – |
 
 ## Technik, die nicht offensichtlich war
 

@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Settings2, X } from 'l
 import { useMemo, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { canPlan } from '../../../data/api';
-import { useMembers, usePlan, useUnassign } from '../../../data/hooks';
+import { useAbsences, useMembers, usePlan, useUnassign } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
 import { addDays, formatDate, isoWeekday, localTime, startOfWeek, today, weekdayShort } from '../../../domain/time';
 import type { Assignment, Member, PlanSlot } from '../../../domain/types';
@@ -36,6 +36,7 @@ function Planner() {
   const [week, setWeek] = useState(startOfWeek(now));
   const to = addDays(week, 6);
   const plan = usePlan(week, to);
+  const absences = useAbsences(week, to);
   const members = useMembers();
   const unassign = useUnassign();
   const [menu, setMenu] = useState<{ a: Assignment; m: Member; slot: PlanSlot } | null>(null);
@@ -110,6 +111,15 @@ function Planner() {
                   weekend={isoWeekday(d) >= 6}
                   onPrint={Platform.OS === 'web' ? () => window.print() : undefined}
                 >
+                  {(() => {
+                    const away = (absences.data ?? []).filter((a) => a.status === 'approved' && a.startDate <= d && a.endDate >= d);
+                    if (!away.length) return null;
+                    return (
+                      <Text variant="sm" color="textMuted">
+                        Abwesend: {away.map((a) => `${byId.get(a.memberId)?.displayName ?? '?'} (${a.kind === 'sick' ? 'krank' : 'Urlaub'})`).join(', ')}
+                      </Text>
+                    );
+                  })()}
                   {slots.length === 0 ? (
                     <Text variant="sm" color="textMuted">An diesem Tag sind keine Schichten vorgesehen.</Text>
                   ) : (

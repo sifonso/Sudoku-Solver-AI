@@ -120,3 +120,54 @@ export function useInviteMember() {
     onSettled: invalidate,
   });
 }
+
+export function useAbsences(from: string, to: string) {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['absences', tenant.id, from, to], queryFn: () => api.listAbsences(tenant.id, from, to) });
+}
+
+export function useVacationBlocks() {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['vacationBlocks', tenant.id], queryFn: () => api.listVacationBlocks(tenant.id) });
+}
+
+function useInvalidateAbsences() {
+  const qc = useQueryClient();
+  return () => {
+    for (const k of ['absences', 'vacationBlocks', 'candidates', 'notifications', 'plan']) qc.invalidateQueries({ queryKey: [k] });
+  };
+}
+
+export function useRequestVacation() {
+  const { tenant } = useActive();
+  const inv = useInvalidateAbsences();
+  return useMutation({
+    mutationFn: (i: { start: string; end: string; comment: string | null }) => api.requestVacation(tenant.id, i.start, i.end, i.comment),
+    onSettled: inv,
+  });
+}
+
+export function useReportSick() {
+  const { tenant } = useActive();
+  const inv = useInvalidateAbsences();
+  return useMutation({ mutationFn: (i: { start: string; end: string }) => api.reportSick(tenant.id, i.start, i.end), onSettled: inv });
+}
+
+export function useDecideAbsence() {
+  const inv = useInvalidateAbsences();
+  return useMutation({ mutationFn: (i: { id: string; approve: boolean }) => api.decideAbsence(i.id, i.approve), onSettled: inv });
+}
+
+export function useCancelAbsence() {
+  const inv = useInvalidateAbsences();
+  return useMutation({ mutationFn: (id: string) => api.cancelAbsence(id), onSettled: inv });
+}
+
+export function useVacationBlockMutations() {
+  const { tenant } = useActive();
+  const inv = useInvalidateAbsences();
+  return {
+    add: useMutation({ mutationFn: (i: { start: string; end: string; reason: string | null }) => api.addVacationBlock(tenant.id, i.start, i.end, i.reason), onSettled: inv }),
+    remove: useMutation({ mutationFn: (id: string) => api.removeVacationBlock(id), onSettled: inv }),
+  };
+}

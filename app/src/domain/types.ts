@@ -15,6 +15,7 @@ export interface Tenant {
   minRestHours: number;
   swapRequiresApproval: boolean;
   employeesSeeFullPlan: boolean;
+  workdays: number[]; // ISO 1 = Mo … 7 = So; für Urlaubstage
 }
 
 export interface Member {
@@ -27,6 +28,7 @@ export interface Member {
   employmentType: Employment;
   status: MemberStatus;
   monthlyHoursLimit: number | null;
+  vacationDaysPerYear: number | null;
   qualificationIds: string[];
 }
 
@@ -76,6 +78,16 @@ export interface Absence {
   startDate: string;
   endDate: string;
   status: 'requested' | 'approved' | 'rejected' | 'cancelled';
+  comment: string | null;
+  createdAt: string;
+}
+
+export interface VacationBlock {
+  id: string;
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
 }
 
 export interface AppNotification {

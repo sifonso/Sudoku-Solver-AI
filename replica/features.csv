@@ -13,7 +13,7 @@ Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,partial,S05 fertig mi
 Zuweisung: Zeiten bearbeiten,schichtplanung,must,yes,no,S04
 Zuweisung löschen,schichtplanung,must,yes,partial,S04 Aktionsmenü; Supabase angebunden
 Konfliktprüfung Überschneidung,schichtplanung,must,yes,partial,"Doppelbuchung hart abgelehnt, Warnung in S05"
-Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,partial,Warnung beim Zuweisen; Anzeige im Plan fehlt
+Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,yes,"Abwesend-Zeile pro Tag im Plan, Hinweis beim Zuweisen"
 Qualifikationsprüfung bei Zuweisung,schichtplanung,should,yes,partial,Warnung in S05; Pflege der Qualifikationen fehlt
 Ruhezeitprüfung (11 h),schichtplanung,should,yes,partial,"Warnung in S05, Ruhezeit pro Betrieb einstellbar (Schema)"
 Schichtvorlagen für wiederkehrende Pläne,schichtplanung,should,yes,no,schichtplanung FAQ
@@ -33,13 +33,13 @@ Verfügbarkeiten (Self-Service),personal,should,yes,no,mitarbeiterverwaltung/ein
 Arbeitszeitmodelle und Stundenkontingente,personal,should,yes,partial,Monatsgrenze ja; Wochensoll fehlt
 Minijob-Stundenwarnung,personal,could,yes,yes,"Stundengrenze pro Person in S08, Hinweis beim Zuweisen"
 Überstunden-Übersicht,personal,could,yes,no,produktion
-Urlaub beantragen,abwesenheiten,must,yes,no,abwesenheiten
-Urlaub genehmigen/ablehnen,abwesenheiten,must,yes,no,abwesenheiten
-Ein-Klick-Krankmeldung,abwesenheiten,must,yes,no,abwesenheiten
-Krankmeldungen-Übersicht,abwesenheiten,must,yes,no,Tab S09
-Resturlaubsanzeige,abwesenheiten,should,yes,no,abwesenheiten
-Urlaubssperren,abwesenheiten,should,yes,no,abwesenheiten
-Ersatz anfragen per Push (Springer),abwesenheiten,should,yes,no,pflege/gastronomie
+Urlaub beantragen,abwesenheiten,must,yes,yes,"S22 mit Arbeitstagen, Kommentar, Zurückziehen; e2e + live"
+Urlaub genehmigen/ablehnen,abwesenheiten,must,yes,yes,S10 mit betroffenen Schichten und Rest danach
+Ein-Klick-Krankmeldung,abwesenheiten,must,yes,yes,"S23: Zeitraum wählen, ein Tipp; Mitteilung an Planer ohne Grund"
+Krankmeldungen-Übersicht,abwesenheiten,must,yes,yes,"S09 mit betroffenen Schichten und ""Ersatz finden"""
+Resturlaubsanzeige,abwesenheiten,should,yes,partial,"Anspruch pro Person (S08), Rest in S22/S10; gesetzliche Feiertage fehlen noch"
+Urlaubssperren,abwesenheiten,should,yes,yes,S10 Reiter Sperren (Chef); DB lehnt Anträge in Sperre ab
+Ersatz anfragen per Push (Springer),abwesenheiten,should,yes,partial,"""Ersatz finden"" öffnet Zuweisen mit Hinweisen; Push-Anfrage an mehrere fehlt"
 Schicht zum Tausch anbieten,schichttausch,must,yes,no,schichttausch
 Auf Tauschangebot bewerben,schichttausch,must,yes,no,schichttausch
 Tausch genehmigen oder Auto-Genehmigung,schichttausch,must,yes,no,schichttausch

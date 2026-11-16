@@ -29,6 +29,7 @@ export default function MemberScreen() {
       setDraft({
         displayName: m.displayName, initials: m.initials, role: m.role, employmentType: m.employmentType,
         monthlyHoursLimit: m.monthlyHoursLimit == null ? '' : String(m.monthlyHoursLimit).replace('.', ','),
+        vacationDays: m.vacationDaysPerYear == null ? '' : String(m.vacationDaysPerYear).replace('.', ','),
       });
     }
   }, [m, draft]);
@@ -55,6 +56,7 @@ export default function MemberScreen() {
         patch: {
           displayName: draft.displayName.trim(), initials: draft.initials.trim(), role: draft.role,
           employmentType: draft.employmentType, monthlyHoursLimit: parseLimit(draft.monthlyHoursLimit),
+          vacationDaysPerYear: parseLimit(draft.vacationDays),
         },
       },
       { onSuccess: () => setNotice('Gespeichert.') },

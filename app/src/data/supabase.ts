@@ -6,7 +6,7 @@ import { createClient, processLock, type PostgrestError } from '@supabase/supaba
 import { AppState, Platform } from 'react-native';
 import { addDays, isoWeekday, shiftBounds } from '../domain/time';
 import type {
-  AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, AppNotification, Assignment, Member, PlanSlot, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 import { ApiError, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { DEFAULT_SHIFT_TYPES } from './defaults';
@@ -18,12 +18,13 @@ type Row = Record<string, any>;
 const toTenant = (r: Row): Tenant => ({
   id: r.id, slug: r.slug, name: r.name, timezone: r.timezone, plan: r.plan, trialEndsAt: r.trial_ends_at,
   minRestHours: Number(r.min_rest_hours), swapRequiresApproval: r.swap_requires_approval,
-  employeesSeeFullPlan: r.employees_see_full_plan,
+  employeesSeeFullPlan: r.employees_see_full_plan, workdays: r.workdays ?? [1, 2, 3, 4, 5],
 });
 const toMember = (r: Row): Member => ({
   id: r.id, tenantId: r.tenant_id, userId: r.user_id, displayName: r.display_name, initials: r.initials,
   role: r.role, employmentType: r.employment_type, status: r.status,
   monthlyHoursLimit: r.monthly_hours_limit == null ? null : Number(r.monthly_hours_limit),
+  vacationDaysPerYear: r.vacation_days_per_year == null ? null : Number(r.vacation_days_per_year),
   qualificationIds: (r.member_qualifications ?? []).map((q: Row) => q.qualification_id),
 });
 const hhmm = (t: string) => t.slice(0, 5);
@@ -40,6 +41,11 @@ const toAssignment = (r: Row): Assignment => ({
   id: r.id, tenantId: r.tenant_id, shiftId: r.shift_id, memberId: r.member_id,
   startAt: new Date(r.start_at).toISOString(), endAt: new Date(r.end_at).toISOString(),
 });
+const toAbsence = (r: Row): Absence => ({
+  id: r.id, tenantId: r.tenant_id, memberId: r.member_id, kind: r.kind, startDate: r.start_date, endDate: r.end_date,
+  status: r.status, comment: r.comment ?? null, createdAt: r.created_at,
+});
+const toBlock = (r: Row): VacationBlock => ({ id: r.id, tenantId: r.tenant_id, startDate: r.start_date, endDate: r.end_date, reason: r.reason ?? null });
 const toNotification = (r: Row): AppNotification => ({
   id: r.id, tenantId: r.tenant_id, memberId: r.member_id, type: r.type, title: r.title, body: r.body,
   data: r.data ?? {}, readAt: r.read_at, createdAt: r.created_at,
@@ -57,6 +63,7 @@ const toWarning = (w: Row): Warning => {
 function fail(e: PostgrestError | { message?: string; code?: string; status?: number } | null): never {
   const code = (e as Row | null)?.code as string | undefined;
   const msg = ((e as Row | null)?.message as string | undefined) ?? '';
+  if (msg.includes('no_overlapping_absence')) throw new ApiError('absence_overlap');
   if (code === '23P01' || msg.includes('no_double_booking')) throw new ApiError('no_double_booking');
   if (code === '42501' || msg.includes('forbidden') || msg.includes('row-level security')) throw new ApiError('forbidden');
   if (code === 'P0002' || code === 'PGRST116') throw new ApiError('not_found');
@@ -64,6 +71,9 @@ function fail(e: PostgrestError | { message?: string; code?: string; status?: nu
   if (code === '23505' && msg.includes('initials')) throw new ApiError('initials_taken');
   if (msg.includes('last_chef')) throw new ApiError('last_chef');
   if (msg.includes('member_limit_reached')) throw new ApiError('member_limit_reached');
+  if (msg.includes('no_overlapping_absence')) throw new ApiError('absence_overlap');
+  if (msg.includes('vacation_blocked')) throw new ApiError('vacation_blocked');
+  if (msg.includes('already_decided')) throw new ApiError('already_decided');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
   throw new ApiError('network', msg || code || 'unbekannter Fehler');
 }
@@ -297,6 +307,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       if (patch.employmentType !== undefined) row.employment_type = patch.employmentType;
       if (patch.status !== undefined) row.status = patch.status;
       if (patch.monthlyHoursLimit !== undefined) row.monthly_hours_limit = patch.monthlyHoursLimit;
+      if (patch.vacationDaysPerYear !== undefined) row.vacation_days_per_year = patch.vacationDaysPerYear;
       const r = await q(sb.from('members').update(row).eq('id', memberId).select('*, member_qualifications(qualification_id)'));
       // RLS: Nicht-Chef bekommt 0 Zeilen statt Fehler
       if (!(r as Row[]).length) throw new ApiError('forbidden');
@@ -315,6 +326,33 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       }
       await sb.auth.signOut({ scope: 'local' });
       return 'deleted';
+    },
+    async listAbsences(tenantId, from, to) {
+      const rows = await q(sb.from('absences').select('*').eq('tenant_id', tenantId).gte('end_date', from).lte('start_date', to).order('start_date'));
+      return (rows as Row[]).map(toAbsence);
+    },
+    async requestVacation(tenantId, start, end, comment) {
+      return (await q(sb.rpc('request_vacation', { p_tenant: tenantId, p_start: start, p_end: end, p_comment: comment }))) as string;
+    },
+    async reportSick(tenantId, start, end) {
+      return (await q(sb.rpc('report_sick', { p_tenant: tenantId, p_start: start, p_end: end }))) as string;
+    },
+    async decideAbsence(absenceId, approve) {
+      await q(sb.rpc('decide_absence', { p_absence_id: absenceId, p_approve: approve }));
+    },
+    async cancelAbsence(absenceId) {
+      await q(sb.rpc('cancel_absence', { p_absence_id: absenceId }));
+    },
+    async listVacationBlocks(tenantId) {
+      const rows = await q(sb.from('vacation_blocks').select('*').eq('tenant_id', tenantId).order('start_date'));
+      return (rows as Row[]).map(toBlock);
+    },
+    async addVacationBlock(tenantId, start, end, reason) {
+      await q(sb.from('vacation_blocks').insert({ tenant_id: tenantId, start_date: start, end_date: end, reason }));
+    },
+    async removeVacationBlock(id) {
+      const r = await q(sb.from('vacation_blocks').delete().eq('id', id).select('id'));
+      if (!(r as Row[]).length) throw new ApiError('forbidden');
     },
     async markNotificationsRead(ids) {
       if (!ids.length) return;

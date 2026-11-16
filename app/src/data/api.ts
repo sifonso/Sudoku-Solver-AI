@@ -2,7 +2,7 @@
 // Supabase-Umsetzung erfüllen dieselbe Signatur, Screens merken den Tausch nicht.
 // Namen folgen den RPCs/Tabellen aus replica/architecture.md.
 import type {
-  AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
+  Absence, VacationBlock, AppNotification, Assignment, Member, PlanSlot, Role, Session, Shift, ShiftType, Tenant, Warning,
 } from '../domain/types';
 
 export class ApiError extends Error {
@@ -23,7 +23,10 @@ export type ApiErrorCode =
   | 'rate_limited'
   | 'member_limit_reached'
   | 'initials_taken'
-  | 'last_chef';
+  | 'last_chef'
+  | 'absence_overlap'
+  | 'vacation_blocked'
+  | 'already_decided';
 
 export interface Membership {
   tenant: Tenant;
@@ -74,6 +77,16 @@ export interface Api {
   // Mitarbeiter-Sicht
   listMyShifts(tenantId: string, from: string, to: string): Promise<MyShift[]>;
 
+  // Abwesenheiten (rpc request_vacation, report_sick, decide_absence, cancel_absence; RLS auf absences)
+  listAbsences(tenantId: string, from: string, to: string): Promise<Absence[]>;
+  requestVacation(tenantId: string, start: string, end: string, comment: string | null): Promise<string>;
+  reportSick(tenantId: string, start: string, end: string): Promise<string>;
+  decideAbsence(absenceId: string, approve: boolean): Promise<void>;
+  cancelAbsence(absenceId: string): Promise<void>;
+  listVacationBlocks(tenantId: string): Promise<VacationBlock[]>;
+  addVacationBlock(tenantId: string, start: string, end: string, reason: string | null): Promise<void>;
+  removeVacationBlock(id: string): Promise<void>;
+
   // Benachrichtigungen
   listNotifications(tenantId: string): Promise<AppNotification[]>;
   markNotificationsRead(ids: string[]): Promise<void>;
@@ -89,7 +102,7 @@ export interface Api {
 }
 
 export type MemberPatch = Partial<Pick<Member,
-  'displayName' | 'initials' | 'role' | 'employmentType' | 'status' | 'monthlyHoursLimit'>>;
+  'displayName' | 'initials' | 'role' | 'employmentType' | 'status' | 'monthlyHoursLimit' | 'vacationDaysPerYear'>>;
 
 export interface InviteInput {
   tenantId: string;

@@ -8,6 +8,7 @@ export type MemberDraft = {
   role: Role;
   employmentType: Employment;
   monthlyHoursLimit: string; // Eingabefeld, leer = keine Grenze
+  vacationDays: string; // Eingabefeld, leer = nicht erfasst
 };
 
 export const initialsOf = (name: string) =>
@@ -19,6 +20,8 @@ export function validateDraft(d: MemberDraft) {
     displayName: d.displayName.trim().length < 2 ? 'Bitte den Namen eingeben.' : d.displayName.length > 80 ? 'Höchstens 80 Zeichen.' : undefined,
     initials: !/^[A-Za-zÄÖÜäöü0-9]{1,4}$/.test(d.initials.trim()) ? '1 bis 4 Buchstaben oder Ziffern.' : undefined,
     monthlyHoursLimit: limit && !(Number(limit) > 0 && Number(limit) <= 744) ? 'Eine Zahl zwischen 1 und 744.' : undefined,
+    vacationDays: d.vacationDays.trim() && !(Number(d.vacationDays.trim().replace(',', '.')) >= 0 && Number(d.vacationDays.trim().replace(',', '.')) <= 366)
+      ? 'Eine Zahl zwischen 0 und 366.' : undefined,
   };
 }
 
@@ -60,6 +63,9 @@ export function MemberFields({ draft, onChange, errors, onNameChange, showLimit 
         keyboardType="decimal-pad" placeholder="keine"
         hint="Zum Beispiel für Minijobs. Beim Einplanen erscheint ein Hinweis, wenn die Grenze überschritten wird."
         onChangeText={(v) => onChange({ ...draft, monthlyHoursLimit: v })} /> : null}
+      {showLimit ? <TextField label="Urlaubstage pro Jahr" value={draft.vacationDays} error={errors?.vacationDays}
+        keyboardType="decimal-pad" placeholder="nicht erfasst" hint="Für die Resturlaubsanzeige."
+        onChangeText={(v) => onChange({ ...draft, vacationDays: v })} /> : null}
     </View>
   );
 }

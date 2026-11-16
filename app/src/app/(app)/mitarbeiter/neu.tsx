@@ -12,7 +12,7 @@ import { Banner, Button, Card, Text, TextField } from '../../../ui';
 export default function InviteScreen() {
   const { tenant, member } = useActive();
   const invite = useInviteMember();
-  const [draft, setDraft] = useState<MemberDraft>({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '' });
+  const [draft, setDraft] = useState<MemberDraft>({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '', vacationDays: '' });
   const [initialsEdited, setInitialsEdited] = useState(false);
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
@@ -33,7 +33,7 @@ export default function InviteScreen() {
       {
         onSuccess: () => {
           setDone(draft.displayName.trim());
-          setDraft({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '' });
+          setDraft({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '', vacationDays: '' });
           setEmail('');
           setTouched(false);
           setInitialsEdited(false);

@@ -3,6 +3,7 @@
 // Wird durch die Supabase-Umsetzung ersetzt (/replica-backend).
 import { checkAssignment as runCheck } from '../domain/rules';
 import { addDays, formatDate, isoWeekday, localTime, overlaps, shiftBounds, weekdayShort } from '../domain/time';
+import type { Absence } from '../domain/types';
 import type { Assignment, Member, PlanSlot, Session, Shift } from '../domain/types';
 import { ApiError, canPlan, type Api, type Membership, type MyShift, type PendingSignup } from './api';
 import { seed, type DB } from './seed';
@@ -42,6 +43,12 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
     const t = db.tenants.find((x) => x.id === id);
     if (!t) throw new ApiError('not_found');
     return t;
+  };
+  // Exclusion-Constraint no_overlapping_absence
+  const checkAbsenceOverlap = (memberId: string, start: string, end: string) => {
+    if (db.absences.some((a) => a.memberId === memberId && (a.status === 'requested' || a.status === 'approved') && a.startDate <= end && a.endDate >= start)) {
+      throw new ApiError('absence_overlap');
+    }
   };
   const notify = (tenantId: string, memberId: string, type: string, title: string, body: string, data: Record<string, string>) => {
     db.notifications.unshift({ id: uid(), tenantId, memberId, type, title, body, data, readAt: null, createdAt: new Date().toISOString() });
@@ -102,11 +109,11 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       db.tenants.push({
         id, slug, name, timezone: 'Europe/Berlin', plan: 'trial',
         trialEndsAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
-        minRestHours: 11, swapRequiresApproval: true, employeesSeeFullPlan: true,
+        minRestHours: 11, swapRequiresApproval: true, employeesSeeFullPlan: true, workdays: [1, 2, 3, 4, 5],
       });
       db.members.push({
         id: uid(), tenantId: id, userId: s.userId, displayName, initials: initials.toUpperCase(), role: 'chef',
-        employmentType: 'vollzeit', status: 'active', monthlyHoursLimit: null, qualificationIds: [],
+        employmentType: 'vollzeit', status: 'active', monthlyHoursLimit: null, vacationDaysPerYear: null, qualificationIds: [],
       });
       return id;
     },
@@ -255,7 +262,7 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       const id = uid();
       db.members.push({
         id, tenantId: input.tenantId, userId: null, displayName: input.displayName, initials: input.initials.toUpperCase(),
-        role: input.role, employmentType: input.employmentType, status: 'invited', monthlyHoursLimit: null, qualificationIds: [],
+        role: input.role, employmentType: input.employmentType, status: 'invited', monthlyHoursLimit: null, vacationDaysPerYear: null, qualificationIds: [],
       });
       contacts.set(id, { email: input.email.trim().toLowerCase(), phone: null });
       return { memberId: id };
@@ -301,6 +308,71 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       db.users = db.users.filter((u) => u.id !== s.userId);
       session = null;
       return 'deleted';
+    },
+    async listAbsences(tenantId, from, to) {
+      await wait();
+      const m = me(tenantId);
+      return db.absences
+        .filter((a) => a.tenantId === tenantId && a.endDate >= from && a.startDate <= to)
+        .filter((a) => canPlan(m.role) || a.memberId === m.id) // RLS absences_select
+        .map((a) => ({ ...a }));
+    },
+    async requestVacation(tenantId, start, end, comment) {
+      await wait();
+      const m = me(tenantId);
+      if (end < start) throw new ApiError('not_found', 'invalid_range');
+      if (db.vacationBlocks.some((b) => b.tenantId === tenantId && b.startDate <= end && b.endDate >= start)) throw new ApiError('vacation_blocked');
+      checkAbsenceOverlap(m.id, start, end);
+      const a: Absence = { id: uid(), tenantId, memberId: m.id, kind: 'vacation', startDate: start, endDate: end, status: 'requested', comment, createdAt: new Date().toISOString() };
+      db.absences.push(a);
+      for (const p of db.members.filter((x) => x.tenantId === tenantId && x.status === 'active' && canPlan(x.role) && x.id !== m.id)) {
+        notify(tenantId, p.id, 'absence_requested', 'Neuer Urlaubsantrag', `${m.displayName}, ${formatDate(start)}–${formatDate(end)}`, { absence_id: a.id });
+      }
+      return a.id;
+    },
+    async reportSick(tenantId, start, end) {
+      await wait();
+      const m = me(tenantId);
+      checkAbsenceOverlap(m.id, start, end);
+      const a: Absence = { id: uid(), tenantId, memberId: m.id, kind: 'sick', startDate: start, endDate: end, status: 'approved', comment: null, createdAt: new Date().toISOString() };
+      db.absences.push(a);
+      for (const p of db.members.filter((x) => x.tenantId === tenantId && x.status === 'active' && canPlan(x.role) && x.id !== m.id)) {
+        notify(tenantId, p.id, 'absence_new', 'Neue Abwesenheit', 'Bitte den Plan prüfen.', { absence_id: a.id });
+      }
+      return a.id;
+    },
+    async decideAbsence(absenceId, approve) {
+      await wait();
+      const a = db.absences.find((x) => x.id === absenceId);
+      if (!a) throw new ApiError('not_found');
+      requirePlanner(a.tenantId);
+      if (a.status !== 'requested') throw new ApiError('already_decided');
+      a.status = approve ? 'approved' : 'rejected';
+      notify(a.tenantId, a.memberId, approve ? 'absence_approved' : 'absence_rejected', approve ? 'Urlaub genehmigt' : 'Urlaub abgelehnt',
+        `${formatDate(a.startDate)}–${formatDate(a.endDate)}`, { absence_id: a.id });
+    },
+    async cancelAbsence(absenceId) {
+      await wait();
+      const a = db.absences.find((x) => x.id === absenceId);
+      if (!a || a.memberId !== me(a.tenantId).id) throw new ApiError('forbidden');
+      if (a.status !== 'requested') throw new ApiError('already_decided');
+      a.status = 'cancelled';
+    },
+    async listVacationBlocks(tenantId) {
+      await wait();
+      me(tenantId);
+      return db.vacationBlocks.filter((b) => b.tenantId === tenantId).sort((a, b) => a.startDate.localeCompare(b.startDate));
+    },
+    async addVacationBlock(tenantId, start, end, reason) {
+      await wait();
+      if (me(tenantId).role !== 'chef') throw new ApiError('forbidden');
+      db.vacationBlocks.push({ id: uid(), tenantId, startDate: start, endDate: end, reason });
+    },
+    async removeVacationBlock(id) {
+      await wait();
+      const b = db.vacationBlocks.find((x) => x.id === id);
+      if (!b || me(b.tenantId).role !== 'chef') throw new ApiError('forbidden');
+      db.vacationBlocks = db.vacationBlocks.filter((x) => x.id !== id);
     },
     async markNotificationsRead(ids) {
       const s = requireSession();
