@@ -1,7 +1,7 @@
 feature,area,priority,original,clone,notes
-Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"S01 mit E-Mail-Bestätigung, Firma entsteht beim ersten Login; Supabase-Datenschicht gebaut, Projekt noch nicht verbunden"
+Firma registrieren mit eigener Subdomain/Workspace,onboarding,must,yes,partial,"S01 mit E-Mail-Bestätigung, Firma entsteht beim ersten Login; live gegen Supabase getestet"
 14 Tage Trial ohne Kreditkarte,onboarding,must,yes,partial,Restlaufzeit unter Mehr sichtbar; Ablauf-Job fehlt
-Login per E-Mail und Passwort,auth,must,yes,partial,S02 fertig inkl. Fehlerzustand und Tastatur; Fake-Datenschicht; echt mit /replica-backend
+Login per E-Mail und Passwort,auth,must,yes,partial,S02 fertig inkl. Fehlerzustand und Tastatur; Supabase angebunden
 Passwort vergessen,auth,must,unknown,no,nicht belegt aber Pflicht
 Rollen Chef / Planer / Aufgaben-Manager / Mitarbeiter,rollen,must,yes,partial,Reiter und Rechte je Rolle; Rollenwechsel in S08 fehlt
 Mitarbeiter sehen nur eigene Details,rollen,must,yes,partial,Fake-API prüft wie RLS; echte RLS getestet im Schema
@@ -9,9 +9,9 @@ Sichtbarkeit Gesamtplan für Mitarbeiter konfigurierbar,rollen,should,yes,no,FAQ
 Schichttypen anlegen (Name Zeiten Wochentage),schichtplanung,must,yes,partial,Standardtypen bei Registrierung; S06 noch Stub
 Schichten über Mitternacht,schichtplanung,must,yes,yes,Zeitlogik getestet inkl. Zeitumstellung (7 h / 9 h)
 Kalender Monats- und Wochenansicht,schichtplanung,must,yes,partial,Woche fertig (1–4 Spalten je Breite); Monat fehlt
-Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,partial,S05 fertig mit Warnungen und Sortierung; Fake-Datenschicht; echt mit /replica-backend
+Mitarbeiter einer Schicht zuweisen,schichtplanung,must,yes,partial,S05 fertig mit Warnungen und Sortierung; Supabase angebunden
 Zuweisung: Zeiten bearbeiten,schichtplanung,must,yes,no,S04
-Zuweisung löschen,schichtplanung,must,yes,partial,S04 Aktionsmenü; Fake-Datenschicht; echt mit /replica-backend
+Zuweisung löschen,schichtplanung,must,yes,partial,S04 Aktionsmenü; Supabase angebunden
 Konfliktprüfung Überschneidung,schichtplanung,must,yes,partial,"Doppelbuchung hart abgelehnt, Warnung in S05"
 Abwesenheiten im Plan berücksichtigen,schichtplanung,must,yes,partial,Warnung beim Zuweisen; Anzeige im Plan fehlt
 Qualifikationsprüfung bei Zuweisung,schichtplanung,should,yes,partial,Warnung in S05; Pflege der Qualifikationen fehlt
