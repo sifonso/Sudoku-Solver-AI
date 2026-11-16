@@ -1,5 +1,5 @@
 // F01 Firma registriert sich (S01) und Anmeldung (S02).
-import { DEMO, expect, test } from './fixtures';
+import { DEMO, expect, openTab, signOut, test } from './fixtures';
 
 test.describe('F01 Registrierung und Anmeldung', () => {
   test('F01-H1 Demo-Chef landet im Plan, Mitarbeiterin bei ihren Schichten', async ({ page }) => {
@@ -113,5 +113,45 @@ test.describe('F01 Registrierung und Anmeldung', () => {
   test('S02-E2 Geschützte Seite ohne Login führt zur Anmeldung', async ({ page }) => {
     await page.goto('/plan');
     await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('F01-H4 Einladungscode: Chef lädt ein, neue Person registriert sich mit Code und landet im Betrieb', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: DEMO.chef }).click();
+    await expect(page.getByText('Frühschicht').first()).toBeVisible();
+    await openTab(page, 'Personal');
+    await page.getByRole('button', { name: 'Einladen' }).click();
+    await page.getByLabel('Name', { exact: true }).fill('Nora Neu');
+    await page.getByLabel('E-Mail').fill('nora@test.de');
+    await page.getByRole('button', { name: 'Einladung senden' }).click();
+    const code = await page.getByText(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/).innerText();
+    await page.getByRole('button', { name: 'Zum Team' }).click();
+    await signOut(page);
+
+    await page.getByRole('link', { name: 'Firma registrieren' }).click();
+    await page.getByRole('radio', { name: 'Mit Einladungscode' }).click();
+    await expect(page.getByRole('heading', { name: 'Team beitreten' })).toBeVisible();
+    await page.getByLabel('Einladungscode').fill(code.toLowerCase().replace('-', ''));
+    await page.getByLabel('E-Mail').filter({ visible: true }).fill('nora@test.de');
+    await page.getByLabel('Passwort').filter({ visible: true }).fill('geheim123');
+    await page.getByRole('checkbox').filter({ visible: true }).click();
+    await page.getByRole('button', { name: 'Konto anlegen und beitreten' }).click();
+    await expect(page).toHaveURL(/\/meine$/);
+    await expect(page.getByText('Hallo Nora')).toBeVisible();
+    await expect(page.getByText('Café Morgenrot').first()).toBeVisible();
+  });
+
+  test('F01-N3 ungültiger Einladungscode wird abgelehnt', async ({ page }) => {
+    await page.goto('/registrieren');
+    await page.getByRole('radio', { name: 'Mit Einladungscode' }).click();
+    await page.getByLabel('Einladungscode').fill('ABCD-EFGH');
+    await page.getByLabel('E-Mail').fill('falsch@test.de');
+    await page.getByLabel('Passwort').fill('geheim123');
+    await page.getByRole('checkbox').click();
+    await page.getByRole('button', { name: 'Konto anlegen und beitreten' }).click();
+    await expect(page.getByText('gehört noch zu keinem Betrieb', { exact: false })).toBeVisible();
+    await page.getByLabel('Einladungscode').fill('ABCD-EFGH');
+    await page.getByRole('button', { name: 'Beitreten' }).click();
+    await expect(page.getByText('Dieser Einladungscode ist ungültig, abgelaufen oder schon benutzt.')).toBeVisible();
   });
 });

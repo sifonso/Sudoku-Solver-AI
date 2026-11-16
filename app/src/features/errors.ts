@@ -14,6 +14,8 @@ export function errorText(e: unknown): string {
     case 'swap_not_open': return 'Dieses Angebot ist nicht mehr offen.';
     case 'not_an_applicant': return 'Diese Person hat sich nicht beworben.';
     case 'invalid_entry': return 'Bitte alle Pflichtfelder ausfüllen und Zahlen als Zahl eingeben.';
+    case 'invalid_code': return 'Dieser Einladungscode ist ungültig, abgelaufen oder schon benutzt.';
+    case 'already_member': return 'Du bist schon in diesem Betrieb.';
     case 'no_double_booking': return 'Diese Person ist zu der Zeit schon eingeteilt.';
     case 'not_found': return 'Das gibt es nicht mehr. Bitte die Ansicht neu laden.';
     case 'rate_limited': return 'Zu viele Versuche. Bitte in ein paar Minuten noch einmal.';

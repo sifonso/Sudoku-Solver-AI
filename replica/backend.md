@@ -110,3 +110,12 @@ Grenzen außerhalb der App, nicht selbst geprüft (Preisseite von hier nicht err
 - Realtime: laut Supabase-Doku 200 gleichzeitige Verbindungen im Free-Plan. Die App nutzt Realtime noch nicht; Mitteilungen werden alle 15 s abgefragt, bei 40 Personen etwa 160 Anfragen pro Minute.
 - Free-Projekte werden nach etwa einer Woche Inaktivität pausiert und haben keine herunterladbaren Backups (Drittquellen). Bei täglicher Nutzung greift die Pause nicht; Backups sind trotzdem ein Grund für Pro.
 - E-Mail: eingebauter Versand 2 Mails/Stunde (Projekteinstellung `rate_limit_email_sent = 2`, selbst ausgelesen). 40 Einladungen brauchen eigenes SMTP.
+
+## Einladen per Code (2026-11-16)
+
+Supabase lehnt im kostenlosen Tarif mit eingebautem Mailversand das Ändern der Mail-Vorlagen ab (`entitlement_required: auth.email_templates`). Mails mit Code statt Link sind damit erst mit Pro oder eigenem SMTP möglich. Deshalb:
+
+- `invite-member` verschickt keine Mail mehr (nur mit `send_email: true`) und gibt einen 8-stelligen Einladungscode zurück (14 Tage gültig, einmalig, nur als SHA-256 gespeichert).
+- RPC `claim_invitation_code(code)` verknüpft das angemeldete Konto mit dem eingeladenen Mitglied; unabhängig von der E-Mail-Adresse. Getestet lokal und live (falscher Code, zweite Verwendung, Groß-/Kleinschreibung).
+- Registrierung „Mit Einladungscode“ und Beitreten für Konten ohne Betrieb in der App.
+- Abschalten der E-Mail-Bestätigung habe ich nicht vorgenommen (Sicherheitseinstellung, Entscheidung des Projekteigentümers); Anleitung in `TESTEN.md`.

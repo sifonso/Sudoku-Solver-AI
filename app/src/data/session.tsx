@@ -95,8 +95,13 @@ export type RegisterResult = { status: 'signed_in' } | { status: 'confirm_email'
 export function useRegister() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (i: { email: string; password: string; company: string; slug: string; name: string; initials: string }): Promise<RegisterResult> => {
-      const s = await api.signUp(i.email, i.password, { company: i.company, slug: i.slug, displayName: i.name, initials: i.initials });
+    mutationFn: async (i: { email: string; password: string } & (
+      { company: string; slug: string; name: string; initials: string; inviteCode?: undefined } | { inviteCode: string }
+    )): Promise<RegisterResult> => {
+      const pending = 'company' in i && i.company !== undefined
+        ? { company: i.company, slug: i.slug, displayName: i.name, initials: i.initials }
+        : { inviteCode: (i as { inviteCode: string }).inviteCode };
+      const s = await api.signUp(i.email, i.password, pending);
       if (!s) return { status: 'confirm_email', email: i.email.trim() };
       switchSession(qc, s);
       return { status: 'signed_in' };
@@ -112,5 +117,14 @@ export function useDeleteAccount() {
     onSuccess: (r) => {
       if (r === 'deleted') switchSession(qc, null);
     },
+  });
+}
+
+/** Angemeldet, aber ohne Betrieb: mit Einladungscode beitreten. */
+export function useJoinWithCode() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => api.joinWithCode(code),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['memberships'] }),
   });
 }

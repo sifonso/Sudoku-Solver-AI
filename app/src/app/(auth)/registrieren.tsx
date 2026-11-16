@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { ApiError } from '../../data/api';
 import { useRegister } from '../../data/session';
 import { AuthFrame } from '../../features/AuthFrame';
-import { Banner, Button, Checkbox, Text, TextField } from '../../ui';
+import { Banner, Button, Checkbox, SegmentedControl, Text, TextField } from '../../ui';
 
 const slugify = (s: string) =>
   s.toLowerCase()
@@ -17,6 +17,8 @@ const initialsOf = (name: string) =>
 
 /** S01 Registrierung: Konto + Betrieb in einem Schritt. Teamintern, ohne Bezahlung. */
 export default function RegisterScreen() {
+  const [mode, setMode] = useState<'betrieb' | 'code'>('betrieb');
+  const [inviteCode, setInviteCode] = useState('');
   const [company, setCompany] = useState('');
   const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
@@ -28,10 +30,12 @@ export default function RegisterScreen() {
   const register = useRegister();
 
   const effSlug = slugEdited ? slug : slugify(company);
+  const viaCode = mode === 'code';
   const errors = {
-    company: company.trim().length < 2 ? 'Bitte den Namen deines Betriebs eingeben.' : undefined,
-    slug: !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(effSlug) ? '3 bis 40 Zeichen: Kleinbuchstaben, Ziffern, Bindestrich.' : undefined,
-    name: name.trim().length < 2 ? 'Bitte deinen Namen eingeben.' : undefined,
+    company: !viaCode && company.trim().length < 2 ? 'Bitte den Namen deines Betriebs eingeben.' : undefined,
+    slug: !viaCode && !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(effSlug) ? '3 bis 40 Zeichen: Kleinbuchstaben, Ziffern, Bindestrich.' : undefined,
+    name: !viaCode && name.trim().length < 2 ? 'Bitte deinen Namen eingeben.' : undefined,
+    code: viaCode && inviteCode.replace(/[^A-Za-z0-9]/g, '').length !== 8 ? 'Der Code hat 8 Zeichen, z. B. K7MP-4QXA.' : undefined,
     email: !/^\S+@\S+\.\S+$/.test(email) ? 'Bitte eine gültige E-Mail-Adresse eingeben.' : undefined,
     password: password.length < 8 ? 'Mindestens 8 Zeichen.' : undefined,
     terms: !terms ? 'Bitte AGB und Datenschutz bestätigen.' : undefined,
@@ -41,11 +45,14 @@ export default function RegisterScreen() {
   const submit = () => {
     setTouched(true);
     if (Object.values(errors).some(Boolean)) return;
-    register.mutate({ email, password, company: company.trim(), slug: effSlug, name: name.trim(), initials: initialsOf(name) || 'CH' });
+    register.mutate(viaCode
+      ? { email, password, inviteCode: inviteCode.trim() }
+      : { email, password, company: company.trim(), slug: effSlug, name: name.trim(), initials: initialsOf(name) || 'CH' });
   };
   const err = register.error instanceof ApiError ? register.error.code : register.error ? 'network' : null;
   const failure =
-    err === 'weak_password' ? 'Das Passwort ist zu schwach. Bitte ein längeres oder weniger übliches wählen.'
+    err === 'invalid_code' ? 'Dieser Einladungscode ist ungültig, abgelaufen oder schon benutzt.'
+    : err === 'weak_password' ? 'Das Passwort ist zu schwach. Bitte ein längeres oder weniger übliches wählen.'
     : err === 'rate_limited' ? 'Zu viele Versuche. Bitte in ein paar Minuten noch einmal.'
     : err === 'email_taken' ? 'Mit dieser E-Mail gibt es schon ein Konto. Bitte anmelden.'
       : err === 'slug_taken' ? 'Diese Firmenadresse ist vergeben. Bitte eine andere wählen.'
@@ -62,8 +69,16 @@ export default function RegisterScreen() {
   }
 
   return (
-    <AuthFrame eyebrow="Betrieb einrichten" title="Betrieb anlegen" intro="Du wirst Chef deines Betriebs und kannst danach dein Team einladen.">
+    <AuthFrame eyebrow="Registrieren" title={viaCode ? 'Team beitreten' : 'Betrieb anlegen'}
+      intro={viaCode ? 'Mit dem Code aus deiner Einladung landest du direkt im richtigen Betrieb.' : 'Du wirst Chef deines Betriebs und kannst danach dein Team einladen.'}>
       {failure ? <Banner tone="danger" title={failure} /> : null}
+      <SegmentedControl label="Art der Registrierung" value={mode} onChange={(m) => { setMode(m); setTouched(false); }}
+        options={[{ value: 'betrieb', label: 'Neuer Betrieb' }, { value: 'code', label: 'Mit Einladungscode' }]} />
+      {viaCode ? (
+        <TextField label="Einladungscode" value={inviteCode} onChangeText={(v) => setInviteCode(v.toUpperCase())}
+          error={show('code')} autoCapitalize="characters" placeholder="K7MP-4QXA" maxLength={9}
+          hint="Den Code bekommst du von deinem Chef." />
+      ) : (<>
       <TextField label="Name des Betriebs" value={company} onChangeText={setCompany} error={show('company')} autoComplete="organization" />
       <TextField
         label="Firmenadresse"
@@ -74,13 +89,14 @@ export default function RegisterScreen() {
         autoCapitalize="none"
       />
       <TextField label="Dein Name" value={name} onChangeText={setName} error={show('name')} autoComplete="name" />
+      </>)}
       <TextField label="E-Mail" value={email} onChangeText={setEmail} error={show('email')} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
       <TextField label="Passwort" value={password} onChangeText={setPassword} error={show('password')} secureTextEntry autoComplete="new-password" hint="Mindestens 8 Zeichen." />
       <View>
         <Checkbox label="Ich akzeptiere AGB und Datenschutzerklärung." checked={terms} onChange={setTerms} />
         {show('terms') ? <Text variant="xs" color="danger">{show('terms')}</Text> : null}
       </View>
-      <Button label="Betrieb anlegen" onPress={submit} loading={register.isPending} fullWidth size="lg" />
+      <Button label={viaCode ? 'Konto anlegen und beitreten' : 'Betrieb anlegen'} onPress={submit} loading={register.isPending} fullWidth size="lg" />
       <View style={styles.row}>
         <Text variant="sm" color="textMuted">Schon registriert?</Text>
         <Link href="/login" accessibilityRole="link"><Text variant="sm" style={styles.link}>Anmelden</Text></Link>

@@ -22,7 +22,8 @@ test.describe('S07/S08 Personal', () => {
     await page.getByRole('radio', { name: 'Aushilfe' }).click();
     await page.getByLabel('E-Mail').fill('oemer@test.de');
     await page.getByRole('button', { name: 'Einladung senden' }).click();
-    await expect(page.getByText('Ömer Yıldız ist eingeladen.')).toBeVisible();
+    await expect(page.getByText('Ömer Yıldız ist eingeladen')).toBeVisible();
+    await expect(page.getByText(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/)).toBeVisible();
     await page.getByRole('button', { name: 'Zum Team' }).click();
     await expect(page.getByText('EINGELADEN · 1')).toBeVisible();
 

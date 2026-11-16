@@ -22,6 +22,18 @@ const uid = () =>
 export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
   let session: Session | null = null;
   const pendingByUser = new Map<string, PendingSignup>();
+  const inviteCodes = new Map<string, string>(); // normalisierter Code -> memberId
+  const normCode = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const claimCode = (code: string, userId: string) => {
+    const memberId = inviteCodes.get(normCode(code));
+    const m = memberId && db.members.find((x) => x.id === memberId && x.status === 'invited' && !x.userId);
+    if (!m) throw new ApiError('invalid_code');
+    if (db.members.some((x) => x.tenantId === m.tenantId && x.userId === userId)) throw new ApiError('already_member');
+    m.userId = userId;
+    m.status = 'active';
+    inviteCodes.delete(normCode(code));
+    return m.tenantId;
+  };
   const contacts = new Map<string, { email: string | null; phone: string | null }>(
     db.users.flatMap((u) => db.members.filter((m) => m.userId === u.id).map((m) => [m.id, { email: u.email, phone: null }] as const)),
   );
@@ -73,7 +85,7 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       await wait();
       const e = email.trim().toLowerCase();
       if (db.users.some((x) => x.email === e)) throw new ApiError('email_taken');
-      if (db.tenants.some((t) => t.slug === pending.slug)) throw new ApiError('slug_taken');
+      if (pending.slug && db.tenants.some((t) => t.slug === pending.slug)) throw new ApiError('slug_taken');
       const u = { id: uid(), email: e, password };
       db.users.push(u);
       pendingByUser.set(u.id, pending);
@@ -85,7 +97,12 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       const s = requireSession();
       const p = pendingByUser.get(s.userId);
       if (!p || db.members.some((m) => m.userId === s.userId)) return null;
-      const tenantId = await this.createTenant({ slug: p.slug, name: p.company, displayName: p.displayName, initials: p.initials });
+      if (p.inviteCode) {
+        const tenantId = claimCode(p.inviteCode, s.userId);
+        pendingByUser.delete(s.userId);
+        return tenantId;
+      }
+      const tenantId = await this.createTenant({ slug: p.slug!, name: p.company!, displayName: p.displayName!, initials: p.initials! });
       for (const [sort, d] of DEFAULT_SHIFT_TYPES.entries()) {
         await this.createShiftType({ tenantId, ...d, sort });
       }
@@ -284,7 +301,10 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
         role: input.role, employmentType: input.employmentType, status: 'invited', monthlyHoursLimit: null, vacationDaysPerYear: null, qualificationIds: [],
       });
       contacts.set(id, { email: input.email.trim().toLowerCase(), phone: null });
-      return { memberId: id };
+      const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      const code = Array.from({ length: 8 }, () => A[Math.floor(Math.random() * A.length)]).join('');
+      inviteCodes.set(code, id);
+      return { memberId: id, code: `${code.slice(0, 4)}-${code.slice(4)}` };
     },
     async updateMember(memberId, patch) {
       await wait();
@@ -312,6 +332,10 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
       const actor = me(m.tenantId);
       if (!canPlan(actor.role) && actor.id !== m.id) return null;
       return contacts.get(memberId) ?? { email: null, phone: null };
+    },
+    async joinWithCode(code) {
+      await wait();
+      return claimCode(code, requireSession().userId);
     },
     async deleteAccount({ deleteTenants }) {
       await wait();

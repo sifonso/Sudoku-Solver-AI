@@ -1,5 +1,6 @@
 import { Redirect, router } from 'expo-router';
-import { UserPlus } from 'lucide-react-native';
+import { Share2, UserPlus } from 'lucide-react-native';
+import { Share, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 import { useInviteMember } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
@@ -16,7 +17,7 @@ export default function InviteScreen() {
   const [initialsEdited, setInitialsEdited] = useState(false);
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
-  const [done, setDone] = useState<string | null>(null);
+  const [done, setDone] = useState<{ name: string; code: string } | null>(null);
 
   if (member.role !== 'chef') return <Redirect href="/personal" />;
 
@@ -31,8 +32,8 @@ export default function InviteScreen() {
         role: draft.role, employmentType: draft.employmentType,
       },
       {
-        onSuccess: () => {
-          setDone(draft.displayName.trim());
+        onSuccess: (r) => {
+          setDone({ name: draft.displayName.trim(), code: r.code });
           setDraft({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '', vacationDays: '' });
           setEmail('');
           setTouched(false);
@@ -45,9 +46,17 @@ export default function InviteScreen() {
   return (
     <AppScreen title="Person einladen" back>
       {done ? (
-        <Banner tone="success" title={`${done} ist eingeladen.`}
-          body="Die Einladung geht per E-Mail raus. Du kannst die Person schon jetzt einplanen."
-          action={<Button label="Zum Team" size="sm" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace('/personal'))} />} />
+        <Card style={styles.done}>
+          <Text variant="label" color="onSuccessSoft">{done.name} ist eingeladen</Text>
+          <Text variant="sm">Gib diesen Einladungscode weiter. {done.name.split(' ')[0]} registriert sich in der App mit „Mit Einladungscode“. Der Code gilt 14 Tage und nur einmal.</Text>
+          <Text variant="display" selectable accessibilityLabel={`Einladungscode ${done.code.split('').join(' ')}`} style={styles.code}>{done.code}</Text>
+          <View style={styles.row}>
+            <Button label="Code teilen" icon={Share2} variant="secondary" size="sm"
+              onPress={() => { Share.share({ message: `Dein Einladungscode für unseren Schichtplan: ${done.code} (in der App „Registrieren“ → „Mit Einladungscode“)` }).catch(() => {}); }} />
+            <Button label="Zum Team" size="sm" variant="secondary" onPress={() => (router.canGoBack() ? router.back() : router.replace('/personal'))} />
+          </View>
+          <Text variant="xs" color="textMuted">Du kannst {done.name.split(' ')[0]} schon jetzt einplanen.</Text>
+        </Card>
       ) : null}
       {invite.isError ? <Banner tone="danger" title={errorText(invite.error)} /> : null}
       <Card style={{ gap: 16 }}>
@@ -60,7 +69,7 @@ export default function InviteScreen() {
         />
         <TextField label="E-Mail" value={email} onChangeText={setEmail} error={touched ? emailError : undefined}
           autoCapitalize="none" keyboardType="email-address" autoComplete="email"
-          hint="An diese Adresse geht der Einladungslink." />
+          hint="Für Kontaktdaten im Team. Die Anmeldung läuft über den Einladungscode." />
         <Button label="Einladung senden" icon={UserPlus} onPress={submit} loading={invite.isPending} fullWidth size="lg" />
       </Card>
       <Text variant="xs" color="textMuted">
@@ -69,3 +78,9 @@ export default function InviteScreen() {
     </AppScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  done: { gap: 10 },
+  code: { letterSpacing: 4 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+});

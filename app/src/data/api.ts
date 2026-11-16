@@ -29,7 +29,9 @@ export type ApiErrorCode =
   | 'already_decided'
   | 'swap_not_open'
   | 'not_an_applicant'
-  | 'invalid_entry';
+  | 'invalid_entry'
+  | 'invalid_code'
+  | 'already_member';
 
 export interface Membership {
   tenant: Tenant;
@@ -37,12 +39,9 @@ export interface Membership {
 }
 
 /** Firmendaten aus der Registrierung. Liegen in den Konto-Metadaten, bis die E-Mail bestätigt ist. */
-export interface PendingSignup {
-  company: string;
-  slug: string;
-  displayName: string;
-  initials: string;
-}
+export type PendingSignup =
+  | { company: string; slug: string; displayName: string; initials: string; inviteCode?: undefined }
+  | { inviteCode: string; company?: undefined; slug?: undefined; displayName?: undefined; initials?: undefined };
 
 export interface MyShift {
   assignment: Assignment;
@@ -124,7 +123,9 @@ export interface Api {
   registerDeviceToken(token: string, platform: 'ios' | 'android' | 'web'): Promise<void>;
 
   // Team (Edge Function invite-member; Änderungen nur Chef, RLS members_write)
-  inviteMember(input: InviteInput): Promise<{ memberId: string }>;
+  inviteMember(input: InviteInput): Promise<{ memberId: string; code: string }>;
+  /** Mit Einladungscode einem Betrieb beitreten (rpc claim_invitation_code). */
+  joinWithCode(code: string): Promise<string>;
   updateMember(memberId: string, patch: MemberPatch): Promise<Member>;
   getMemberContact(memberId: string): Promise<{ email: string | null; phone: string | null } | null>;
 

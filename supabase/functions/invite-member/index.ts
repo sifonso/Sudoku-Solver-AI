@@ -1,6 +1,7 @@
 // Mitarbeiter einladen (F01, S08). Nur Chefs.
-// Legt das Mitglied (status invited) + Einladung an und lässt Supabase Auth die Einladungs-Mail senden.
-// Eingelöst wird über claim_invitations() bei der ersten Anmeldung mit bestätigter E-Mail.
+// Legt das Mitglied (status invited) + Einladung an und gibt einen Einladungscode zurück, den der Chef weitergibt.
+// Eingelöst wird mit claim_invitation_code() nach der Registrierung. Eine Einladungs-Mail geht nur mit
+// send_email: true raus (sinnvoll erst mit eigenem SMTP; der eingebaute Versand schafft 2 Mails pro Stunde).
 import { admin, caller, cors, json } from '../_shared/auth.ts';
 
 type Input = {
@@ -10,7 +11,15 @@ type Input = {
   email: string;
   role?: 'chef' | 'planer' | 'aufgaben_manager' | 'mitarbeiter';
   employment_type?: 'vollzeit' | 'teilzeit' | 'aushilfe';
+  send_email?: boolean;
 };
+
+// Ohne leicht verwechselbare Zeichen (0/O, 1/I/L)
+const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function newCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(8));
+  return [...bytes].map((b) => ALPHABET[b % ALPHABET.length]).join('');
+}
 
 const ROLES = ['chef', 'planer', 'aufgaben_manager', 'mitarbeiter'];
 const TYPES = ['vollzeit', 'teilzeit', 'aushilfe'];
@@ -25,6 +34,7 @@ function validate(b: Partial<Input>): Input | string {
   return {
     tenant_id: b.tenant_id, display_name: b.display_name.trim(), initials: b.initials.trim().toUpperCase(),
     email: b.email.trim().toLowerCase(), role: b.role ?? 'mitarbeiter', employment_type: b.employment_type ?? 'vollzeit',
+    send_email: b.send_email === true,
   };
 }
 
@@ -57,16 +67,17 @@ Deno.serve(async (req) => {
     return json({ error: 'member_insert_failed' }, 500);
   }
   await db.from('member_contacts').insert({ member_id: member.id, tenant_id: input.tenant_id, email: input.email });
-  const token = crypto.randomUUID();
-  await db.from('invitations').insert({
-    tenant_id: input.tenant_id, member_id: member.id, email: input.email, token_hash: await sha256(token),
+  const code = newCode();
+  const { error: invErr } = await db.from('invitations').insert({
+    tenant_id: input.tenant_id, member_id: member.id, email: input.email, token_hash: await sha256(code),
+    expires_at: new Date(Date.now() + 14 * 86_400_000).toISOString(),
   });
+  if (invErr) return json({ error: 'invitation_insert_failed' }, 500);
 
-  // Neues Konto: Supabase schickt die Einladungs-Mail. Bestehendes Konto: Mitglied wird beim nächsten Login verknüpft.
-  const { error: invErr } = await db.auth.admin.inviteUserByEmail(input.email, {
-    data: { invited_to: input.tenant_id },
-  });
-  const existing = invErr && /already been registered|already exists/i.test(invErr.message);
-  if (invErr && !existing) return json({ error: 'invite_mail_failed', member_id: member.id }, 502);
-  return json({ member_id: member.id, existing_account: !!existing });
+  let emailed = false;
+  if (input.send_email) {
+    const { error: mailErr } = await db.auth.admin.inviteUserByEmail(input.email, { data: { invited_to: input.tenant_id } });
+    emailed = !mailErr;
+  }
+  return json({ member_id: member.id, code: `${code.slice(0, 4)}-${code.slice(4)}`, expires_in_days: 14, emailed });
 });

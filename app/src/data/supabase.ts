@@ -94,6 +94,8 @@ function fail(e: PostgrestError | { message?: string; code?: string; status?: nu
   if (msg.includes('swap_not_open') || (code === '23505' && msg.includes('swap_one_active'))) throw new ApiError('swap_not_open');
   if (msg.includes('not_an_applicant')) throw new ApiError('not_an_applicant');
   if (msg.includes('missing_field') || msg.includes('invalid_number')) throw new ApiError('invalid_entry');
+  if (msg.includes('invalid_code')) throw new ApiError('invalid_code');
+  if (msg.includes('already_member')) throw new ApiError('already_member');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
   throw new ApiError('network', msg || code || 'unbekannter Fehler');
 }
@@ -153,8 +155,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return { userId: data.user.id, email: data.user.email ?? '' };
     },
     async signUp(email, password, pending: PendingSignup) {
-      const free = await q(sb.rpc('slug_available', { p_slug: pending.slug }));
-      if (!free) throw new ApiError('slug_taken');
+      if (pending.slug) {
+        const free = await q(sb.rpc('slug_available', { p_slug: pending.slug }));
+        if (!free) throw new ApiError('slug_taken');
+      }
       const { data, error } = await sb.auth.signUp({
         email: email.trim(),
         password,
@@ -179,6 +183,11 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       if (claimed > 0) return 'claimed';
       const pending = data.user.user_metadata?.pending_signup as PendingSignup | undefined;
       if (!pending) return null;
+      if (pending.inviteCode) {
+        const tenantId = (await q(sb.rpc('claim_invitation_code', { p_code: pending.inviteCode }))) as string;
+        await sb.auth.updateUser({ data: { pending_signup: null } });
+        return tenantId;
+      }
       const existing = await q(sb.from('members').select('id').eq('user_id', data.user.id).limit(1));
       if ((existing as Row[]).length) return null;
       const tenantId = (await q(sb.rpc('create_tenant', {
@@ -321,7 +330,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         if (code === 'member_limit_reached' || code === 'initials_taken' || code === 'forbidden') throw new ApiError(code);
         throw new ApiError('network', code ?? error.message);
       }
-      return { memberId: (data as Row).member_id };
+      return { memberId: (data as Row).member_id, code: (data as Row).code };
     },
     async updateMember(memberId, patch) {
       const row: Row = {};
@@ -340,6 +349,9 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async getMemberContact(memberId) {
       const r = await q(sb.from('member_contacts').select('email, phone').eq('member_id', memberId).maybeSingle());
       return r ? { email: (r as Row).email ?? null, phone: (r as Row).phone ?? null } : null;
+    },
+    async joinWithCode(code) {
+      return (await q(sb.rpc('claim_invitation_code', { p_code: code }))) as string;
     },
     async deleteAccount({ deleteTenants }) {
       const { error } = await sb.functions.invoke('delete-account', { body: { confirm: true, delete_tenants: deleteTenants } });

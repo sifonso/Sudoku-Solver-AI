@@ -70,13 +70,16 @@ test('LIVE-03 Einladung über Edge Function und Einlösen', async () => {
     body: { tenant_id: tenantId, display_name: 'Mia Live', initials: 'ML', email: u.B.email, employment_type: 'aushilfe' },
   });
   expect(inv.error).toBeNull();
-  expect(inv.data.existing_account).toBe(true);
+  expect(inv.data.code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  expect(inv.data.emailed).toBe(false);
   const notChef = await u.B.c.functions.invoke('invite-member', {
     body: { tenant_id: tenantId, display_name: 'X', initials: 'XX', email: 'x@example.com' },
   });
   expect((notChef.error as { context?: Response })?.context?.status).toBe(403);
-  expect((await u.B.c.rpc('claim_invitations')).data).toBe(1);
-  expect((await u.B.c.rpc('claim_invitations')).data).toBe(0);
+  // Fremde Person kann mit falschem Code nichts übernehmen; richtiger Code wirkt genau einmal
+  expect((await u.C.c.rpc('claim_invitation_code', { p_code: 'ABCD-EFGH' })).error?.message).toContain('invalid_code');
+  expect((await u.B.c.rpc('claim_invitation_code', { p_code: inv.data.code.toLowerCase() })).data).toBe(tenantId);
+  expect((await u.C.c.rpc('claim_invitation_code', { p_code: inv.data.code })).error?.message).toContain('invalid_code');
   const m = await u.B.c.from('members').select('id, status').eq('user_id', u.B.id).single();
   expect(m.data?.status).toBe('active');
   memberB = m.data!.id;

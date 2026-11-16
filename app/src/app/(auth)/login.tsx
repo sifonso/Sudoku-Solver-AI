@@ -4,7 +4,8 @@ import { StyleSheet, View } from 'react-native';
 import { ApiError } from '../../data/api';
 import { backend } from '../../data/client';
 import { DEMO_PASSWORD, DEMO_USERS } from '../../data/seed';
-import { useSession, useSignIn, useSignOut } from '../../data/session';
+import { useJoinWithCode, useSession, useSignIn, useSignOut } from '../../data/session';
+import { errorText } from '../../features/errors';
 import { AuthFrame } from '../../features/AuthFrame';
 import { Banner, Button, Text, TextField } from '../../ui';
 
@@ -16,6 +17,8 @@ export default function LoginScreen() {
   const signIn = useSignIn();
   const signOut = useSignOut();
   const { needsTenant, session } = useSession();
+  const join = useJoinWithCode();
+  const [joinCode, setJoinCode] = useState('');
 
   const emailError = touched && !/^\S+@\S+\.\S+$/.test(email) ? 'Bitte eine gültige E-Mail-Adresse eingeben.' : undefined;
   const pwError = touched && password.length === 0 ? 'Bitte das Passwort eingeben.' : undefined;
@@ -36,9 +39,14 @@ export default function LoginScreen() {
   return (
     <AuthFrame eyebrow="Anmelden" title="Willkommen zurück" intro="Melde dich mit deiner Arbeits-E-Mail an.">
       {needsTenant ? (
-        <Banner tone="warning" title={`${session?.email ?? 'Dieses Konto'} gehört noch zu keinem Betrieb.`}
-          body="Lass dich von deinem Chef einladen oder registriere einen eigenen Betrieb."
-          action={<Button label="Abmelden" size="sm" variant="secondary" onPress={() => signOut.mutate()} />} />
+        <View style={styles.join}>
+          <Banner tone="warning" title={`${session?.email ?? 'Dieses Konto'} gehört noch zu keinem Betrieb.`}
+            body="Gib den Einladungscode von deinem Chef ein oder melde dich ab."
+            action={<Button label="Abmelden" size="sm" variant="secondary" onPress={() => signOut.mutate()} />} />
+          <TextField label="Einladungscode" value={joinCode} onChangeText={(v) => setJoinCode(v.toUpperCase())} autoCapitalize="characters"
+            placeholder="K7MP-4QXA" maxLength={9} error={join.isError ? errorText(join.error) : undefined} />
+          <Button label="Beitreten" onPress={() => join.mutate(joinCode)} loading={join.isPending} fullWidth />
+        </View>
       ) : null}
       {failure ? <Banner tone="danger" title={failure} /> : null}
       <TextField
@@ -83,4 +91,5 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, justifyContent: 'center', alignItems: 'center', minHeight: 44 },
   link: { fontFamily: 'Inter_600SemiBold', textDecorationLine: 'underline' },
   demo: { gap: 8, marginTop: 8 },
+  join: { gap: 12 },
 });
