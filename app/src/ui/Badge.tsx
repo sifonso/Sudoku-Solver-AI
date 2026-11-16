@@ -63,7 +63,8 @@ export function EmployeeChip({ name, initials, employment, warning, selected, ..
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${name}, ${employmentLabel[employment]}${warning ? `, Warnung: ${warning}` : ''}`}
+      // Kein eigenes Label: der Name kommt aus dem sichtbaren Text (Kürzel, Name, Art oder Warnung),
+      // damit Sprachsteuerung "Lena Kraus" findet (WCAG 2.5.3, axe: label-content-name-mismatch).
       style={({ pressed }) => [
         styles.chip,
         {

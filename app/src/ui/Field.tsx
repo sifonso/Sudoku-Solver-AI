@@ -51,6 +51,8 @@ export function Checkbox({ label, checked, onChange, disabled }: {
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked, disabled }}
+      // aria-checked ausdrücklich setzen: RN Web lässt es sonst bei false weg (axe: aria-required-attr)
+      aria-checked={checked}
       accessibilityLabel={label}
       disabled={disabled}
       onPress={() => onChange(!checked)}

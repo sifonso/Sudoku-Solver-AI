@@ -1,9 +1,9 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Check, Users, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ApiError } from '../../data/api';
+import { ApiError, canPlan } from '../../data/api';
 import { useAssign, useCandidates, useShiftTypes } from '../../data/hooks';
 import { useActive } from '../../data/session';
 import { warningText } from '../../domain/rules';
@@ -13,6 +13,12 @@ import { Avatar, Badge, Banner, Button, EmptyState, IconButton, ListRow, Skeleto
 
 /** S05 Mitarbeiter zuweisen. Sortiert: ohne Warnung zuerst. Warnungen blockieren nicht, Doppelbuchung schon. */
 export default function AssignScreen() {
+  const { member } = useActive();
+  if (!canPlan(member.role)) return <Redirect href="/meine" />;
+  return <Assign />;
+}
+
+function Assign() {
   const { type, date } = useLocalSearchParams<{ type: string; date: string }>();
   const { tenant } = useActive();
   const { c } = useTheme();

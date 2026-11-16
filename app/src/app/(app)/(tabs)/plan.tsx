@@ -1,7 +1,8 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { CalendarDays, ChevronLeft, ChevronRight, Pencil, Settings2, X } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { canPlan } from '../../../data/api';
 import { useMembers, usePlan, useUnassign } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
 import { addDays, formatDate, isoWeekday, localTime, startOfWeek, today, weekdayShort } from '../../../domain/time';
@@ -22,6 +23,13 @@ function isoWeek(date: string): number {
 
 /** S03 Schichtplan, Wochenansicht. */
 export default function PlanScreen() {
+  const { member } = useActive();
+  // Nur Chef/Planer. Die Datenbank lehnt Zuweisungen anderer Rollen ohnehin ab (RLS).
+  if (!canPlan(member.role)) return <Redirect href="/meine" />;
+  return <Planner />;
+}
+
+function Planner() {
   const { tenant } = useActive();
   const tz = tenant.timezone;
   const now = today(tz);

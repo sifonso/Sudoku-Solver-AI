@@ -61,7 +61,7 @@ export function ShiftBlock({ name, time, staffed, needed, onAdd, children }: {
       {onAdd ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Mitarbeiter zu ${name} hinzufügen`}
+          accessibilityLabel={`Zuweisen: ${name}`}
           onPress={onAdd}
           style={({ pressed }) => [styles.add, { borderColor: c.borderInput, opacity: pressed ? 0.7 : 1 }]}
         >
