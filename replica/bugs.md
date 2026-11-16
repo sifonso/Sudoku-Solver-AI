@@ -185,7 +185,7 @@ Steps
 Expected: S11 öffnet sich.
 Actual: Nichts passiert, erst der zweite Tipp wirkt. Beim Drücken bekam der Knopf den Fokus, der Rahmen wuchs von 1 auf 2 px, der Knopf brach in die nächste Zeile um und das Loslassen landete daneben. Kein History-Aufruf protokolliert.
 Evidence: Debug-Lauf mit `history.pushState`-Spion; Bounding-Box vor/nach Fokus unterschiedlich.
-Status: fixed in STATSFIX (Fokusring als Outline ohne Layout-Änderung, `src/ui/Button.tsx`; Eingabefeld gleicht Rahmen über Padding aus); Regressionstest P-E2 vergleicht Bounding-Box
+Status: fixed in b15a9eb (Fokusring als Outline ohne Layout-Änderung, `src/ui/Button.tsx`; Eingabefeld gleicht Rahmen über Padding aus); Regressionstest P-E2 vergleicht Bounding-Box
 
 ## Zu prüfen (nicht reproduziert)
 
