@@ -3,7 +3,7 @@ import { useMemo, useSyncExternalStore } from 'react';
 import { backend } from '../data/client';
 import { useActive } from '../data/session';
 import { indexEntries, type DpSettings, type Entry, type Staff } from './model';
-import { dpFake, type DpApi } from './store';
+import { dpFake, type Actor, type DpApi } from './store';
 import { dpSupabase } from './supabaseStore';
 
 export const dp: DpApi = backend === 'demo' ? dpFake() : dpSupabase();
@@ -40,6 +40,40 @@ export function useMe(): Staff | null {
   return data?.staff.find((s) => s.memberId === member.id) ?? null;
 }
 
+/** Wer handelt: Login, Rolle und verknüpfte Person im Plan. */
+export function useActor(): Actor {
+  const { member } = useActive();
+  const me = useMe();
+  const as = useDemoAs();
+  // Demo: wer als Person aus dem Plan handelt, hat deren Rechte (keine FK4/SL-Rechte)
+  const isLead = canLead(member.role) && !(backend === 'demo' && as);
+  return { memberId: member.id, name: member.displayName, isLead, staffId: me?.id ?? null };
+}
+
+export function useComments(from: string, to: string) {
+  const { tenant } = useActive();
+  const q = useQuery({ queryKey: ['dp-comments', tenant.id, from, to], queryFn: () => dp.comments(tenant.id, from, to) });
+  const map = useMemo(() => {
+    const m = new Map<string, NonNullable<typeof q.data>>();
+    for (const c of q.data ?? []) {
+      const k = `${c.staffId}|${c.date}`;
+      m.set(k, [...(m.get(k) ?? []), c]);
+    }
+    return m;
+  }, [q.data]);
+  return { ...q, map };
+}
+
+export function useCommentAction<T>(fn: (tenantId: string, input: T, actor: Actor) => Promise<void>) {
+  const { tenant } = useActive();
+  const actor = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: T) => fn(tenant.id, input, actor),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp-comments', tenant.id] }),
+  });
+}
+
 export function useSetEntry() {
   const { tenant } = useActive();
   const qc = useQueryClient();
@@ -72,11 +106,12 @@ export function useSwapBoard() {
   return useQuery({ queryKey: ['dp-swaps', tenant.id], queryFn: () => dp.swaps(tenant.id), refetchInterval: 15000 });
 }
 
-export function useSwapAction<T>(fn: (tenantId: string, input: T) => Promise<void>) {
+export function useSwapAction<T>(fn: (tenantId: string, input: T, actor: Actor) => Promise<void>) {
   const { tenant } = useActive();
+  const actor = useActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: T) => fn(tenant.id, input),
+    mutationFn: (input: T) => fn(tenant.id, input, actor),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dp-swaps', tenant.id] });
       qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] });

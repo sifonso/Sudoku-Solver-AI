@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import {
   DEFAULT_SETTINGS as S, cellFor, dayCounters, holidayOf, indexEntries, isWork, parseCode, rhythmIndex, yearStats, type Staff,
 } from './model.ts';
-import { SwapError, planSwap } from './swap.ts';
+import { SwapError, planRing, planSwap } from './swap.ts';
 
 const rhythm: string[] = Array.from({ length: 112 }, (_, i) => (i % 7 < 3 ? 'F' : i % 7 < 5 ? 'S/N' : ''));
 const person = (id: string, r = rhythm): Staff => ({
@@ -72,8 +72,44 @@ test('Tausch: Übernahme setzt DT beim Anbieter, Gegendienst tauscht zurück, Do
   const b = person('b', Array.from({ length: 112 }, (_, i) => (i % 7 === 5 ? 'M' : '')));
   const offer = { id: 'o', staffId: 'a', date: '2027-01-04', code: 'F', note: '', status: 'open' as const, requests: [], acceptedRequestId: null, createdAt: '', decidedBy: null };
   const ch = planSwap(offer, { staffId: 'b', returnDate: '2027-01-09' }, [a, b], [], S);
-  assert.deepEqual(ch.map((x) => `${x.staffId}:${x.date}:${x.code}`), ['b:2027-01-04:F', 'a:2027-01-04:DT', 'a:2027-01-09:M', 'b:2027-01-09:DT']);
+  assert.deepEqual(ch.map((x) => `${x.staffId}:${x.date}:${x.code}`).sort(), ['a:2027-01-04:DT', 'a:2027-01-09:M', 'b:2027-01-04:F', 'b:2027-01-09:DT']);
   assert.throws(() => planSwap(offer, { staffId: 'a2', returnDate: null }, [a, b], [], S), SwapError);
   const busy = person('c');
   assert.throws(() => planSwap(offer, { staffId: 'c', returnDate: null }, [a, busy], [], S), (e: SwapError) => e.code === 'no_double_booking');
+});
+
+test('Tausch am selben Tag 1:1 und Dreieckstausch', () => {
+  const day = '2027-01-04';
+  const e = [
+    { staffId: 'a', date: day, code: 'T1/F', flex: false },
+    { staffId: 'b', date: day, code: 'T2/S', flex: false },
+    { staffId: 'c', date: day, code: 'PA/M', flex: false },
+  ];
+  const ppl = [person('a'), person('b'), person('c')];
+  const one = planRing([{ staffId: 'a', date: day, code: '' }, { staffId: 'b', date: day, code: '' }], ppl, e, S);
+  assert.deepEqual(one.map((x) => `${x.staffId}:${x.code}`).sort(), ['a:T2/S', 'b:T1/F']);
+  const tri = planRing([{ staffId: 'a', date: day, code: '' }, { staffId: 'b', date: day, code: '' }, { staffId: 'c', date: day, code: '' }], ppl, e, S);
+  assert.deepEqual(tri.map((x) => `${x.staffId}:${x.code}`).sort(), ['a:PA/M', 'b:T1/F', 'c:T2/S']);
+  // b gibt nichts ab, hat aber am Tag Dienst: geht nicht
+  assert.throws(() => planRing([{ staffId: 'a', date: day, code: '' }, { staffId: 'b', date: null, code: '' }], ppl, e, S), (x: SwapError) => x.code === 'no_double_booking');
+  assert.throws(() => planRing([{ staffId: 'a', date: day, code: '' }, { staffId: 'a', date: day, code: '' }], ppl, e, S), (x: SwapError) => x.code === 'invalid_entry');
+});
+
+test('Vorübergehender Turnus: wie Kolleg:in, verschoben, ohne; zählt bei Ausbildung nicht zur Besetzung', () => {
+  const trainer = person('t');
+  const azubi: Staff = { ...person('z'), overrides: [
+    { id: '1', from: '2027-01-04', to: '2027-01-10', kind: 'follow', followId: 't' },
+    { id: '2', from: '2027-01-11', to: '2027-01-11', kind: 'shift', weeks: 0 },
+    { id: '3', from: '2027-01-12', to: '2027-01-12', kind: 'none' },
+  ] };
+  const e = indexEntries([{ staffId: 't', date: '2027-01-04', code: 'T1/F', flex: false }]);
+  const byId = new Map([['t', trainer], ['z', azubi]]);
+  const c1 = cellFor(azubi, '2027-01-04', e, S, 'fein', byId);
+  assert.deepEqual([c1.code, c1.source], ['T1/F', 'temp']);
+  assert.equal(cellFor(azubi, '2027-01-11', e, S, 'fein', byId).code, 'F');
+  assert.equal(cellFor(azubi, '2027-01-12', e, S, 'fein', byId).code, '');
+  assert.equal(cellFor(azubi, '2027-01-13', e, S, 'fein', byId).source, 'rhythm');
+  const cnt = dayCounters('2027-01-04', [trainer, azubi], e, S);
+  assert.equal(cnt['T1/F'], 1);
+  assert.equal(cnt['Verfügbar'], 0);
 });

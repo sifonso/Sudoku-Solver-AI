@@ -11,7 +11,7 @@ import { IconButton, Text } from '../ui';
  * Rahmen für alle Screens hinter dem Login: Titelzeile mit Zurück/Glocke,
  * scrollender Inhalt mit Maximalbreite, Pull-to-refresh.
  */
-export function AppScreen({ title, eyebrow, back, actions, children, onRefresh, refreshing = false, scroll = true }: {
+export function AppScreen({ title, eyebrow, back, actions, children, onRefresh, refreshing = false, scroll = true, wide = false }: {
   title: string;
   eyebrow?: string;
   back?: boolean;
@@ -20,11 +20,13 @@ export function AppScreen({ title, eyebrow, back, actions, children, onRefresh, 
   onRefresh?: () => void;
   refreshing?: boolean;
   scroll?: boolean;
+  /** volle Fensterbreite (Monatsplan) */
+  wide?: boolean;
 }) {
   const { c } = useTheme();
   const notifications = useNotifications();
   const unread = notifications.data?.filter((n) => !n.readAt).length ?? 0;
-  const body = <View style={[styles.content, { maxWidth: tokens.layout.contentMax }]}>{children}</View>;
+  const body = <View style={[styles.content, { maxWidth: wide ? undefined : tokens.layout.contentMax }]}>{children}</View>;
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.root, { backgroundColor: c.bg }]}>
       <View style={[styles.bar, { borderBottomColor: c.border }]}>

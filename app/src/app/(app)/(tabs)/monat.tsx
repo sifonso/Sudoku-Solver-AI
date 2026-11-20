@@ -1,18 +1,17 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useActive } from '../../../data/session';
 import { EntryEditor } from '../../../dienstplan/EntryEditor';
 import { MonthGrid } from '../../../dienstplan/MonthGrid';
-import { canLead, useDp, useDpEntries, useMe } from '../../../dienstplan/hooks';
-import { DAY_COLORS, MONTHS, monthDays, type Cell, type Staff } from '../../../dienstplan/model';
+import { useActor, useComments, useDp, useDpEntries, useMe } from '../../../dienstplan/hooks';
+import { SwapComposer } from '../../../dienstplan/SwapComposer';
+import { DAY_COLORS, MONTHS, byIdOf, cellFor, isWork, monthDays, type Cell, type Staff } from '../../../dienstplan/model';
 import { CodeBadge } from '../../../dienstplan/ui';
 import { AppScreen } from '../../../features/AppScreen';
 import { Banner, IconButton, SegmentedControl, Skeleton, Text } from '../../../ui';
 
 /** Hauptansicht: Monatsplan aller Personen mit Besetzung je Arbeitsplatz und Schicht. */
 export default function MonthScreen() {
-  const { member } = useActive();
   const now = new Date();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() });
   const [mode, setMode] = useState<'fein' | 'rhythmus'>('fein');
@@ -20,13 +19,20 @@ export default function MonthScreen() {
   const days = useMemo(() => monthDays(ym.y, ym.m), [ym]);
   const dp = useDp();
   const entries = useDpEntries(days[0] ?? '', days[days.length - 1] ?? '');
+  const comments = useComments(days[0] ?? '', days[days.length - 1] ?? '');
+  const [swap, setSwap] = useState<{ staffId: string | null; date: string | null }[] | null>(null);
   const me = useMe();
-  const lead = canLead(member.role);
+  const lead = useActor().isLead;
+  const cellForMe = (st: Staff, date: string) => {
+    if (!dp.data) return null;
+    const code = cellFor(st, date, entries.map, dp.data.settings, 'fein', byIdOf(dp.data.staff)).code;
+    return isWork(code, dp.data.settings) ? date : null;
+  };
   const step = (n: number) => setYm(({ y, m }) => ({ y: m + n < 0 ? y - 1 : m + n > 11 ? y + 1 : y, m: (m + n + 12) % 12 }));
 
   return (
-    <AppScreen title={`${MONTHS[ym.m]} ${ym.y}`} eyebrow="Dienstplan"
-      onRefresh={() => { dp.refetch(); entries.refetch(); }} refreshing={entries.isRefetching}
+    <AppScreen wide title={`${MONTHS[ym.m]} ${ym.y}`} eyebrow="Dienstplan"
+      onRefresh={() => { dp.refetch(); entries.refetch(); comments.refetch(); }} refreshing={entries.isRefetching}
       actions={<>
         <IconButton icon={ChevronLeft} label="Voriger Monat" tone="soft" onPress={() => step(-1)} />
         <IconButton icon={ChevronRight} label="Nächster Monat" tone="soft" onPress={() => step(1)} />
@@ -36,7 +42,7 @@ export default function MonthScreen() {
           options={[{ value: 'fein', label: 'Feinplan' }, { value: 'rhythmus', label: 'Rhythmus' }]} />
         <Text variant="xs" color="textMuted" style={{ flex: 1, minWidth: 200 }}>
           {mode === 'fein'
-            ? 'Graue Kürzel kommen aus dem Grundrhythmus und haben noch keinen Arbeitsplatz.'
+            ? 'Graue Kürzel: Grundturnus ohne Arbeitsplatz. Grün unterstrichen: vorübergehender Turnus. Ecke oben links: Kommentar.'
             : 'Nur der 16-Wochen-Grundrhythmus, ohne Feinplanung.'}
         </Text>
       </View>
@@ -44,7 +50,7 @@ export default function MonthScreen() {
       {!dp.data || entries.isLoading ? (
         <Skeleton height={420} />
       ) : (
-        <MonthGrid days={days} staff={dp.data.staff} entries={entries.map} settings={dp.data.settings} mode={mode}
+        <MonthGrid days={days} staff={dp.data.staff} entries={entries.map} comments={comments.map} settings={dp.data.settings} mode={mode}
           meId={me?.id ?? null} onCell={(staff, date, cell) => setSel({ staff, date, cell })} />
       )}
       {dp.data ? (
@@ -63,7 +69,22 @@ export default function MonthScreen() {
       ) : null}
       {dp.data ? (
         <EntryEditor open={!!sel} staff={sel?.staff ?? null} date={sel?.date ?? null} cell={sel?.cell ?? null}
-          settings={dp.data.settings} canEdit={lead} isMe={!!me && sel?.staff.id === me.id} onClose={() => setSel(null)} />
+          settings={dp.data.settings} canEdit={lead} isMe={!!me && sel?.staff.id === me.id}
+          comments={sel ? comments.map.get(`${sel.staff.id}|${sel.date}`) ?? [] : []} onClose={() => setSel(null)}
+          onSwap={sel && isWork(sel.cell.code, dp.data.settings) && (lead || me) ? () => {
+            const s0 = sel;
+            setSel(null);
+            if (lead && !me?.inPlan) setSwap([{ staffId: s0.staff.id, date: s0.date }, { staffId: null, date: null }]);
+            else if (me && s0.staff.id === me.id) setSwap([{ staffId: me.id, date: s0.date }, { staffId: null, date: null }]);
+            else if (me) {
+              // Eigener Dienst am selben Tag als Gegendienst vorschlagen, sonst nur Übernahme
+              const mine = entries.map && dp.data ? cellForMe(me, s0.date) : null;
+              setSwap([{ staffId: me.id, date: mine }, { staffId: s0.staff.id, date: s0.date }]);
+            }
+          } : undefined} />
+      ) : null}
+      {dp.data ? (
+        <SwapComposer open={!!swap} initial={swap ?? []} onClose={() => setSwap(null)} />
       ) : null}
     </AppScreen>
   );

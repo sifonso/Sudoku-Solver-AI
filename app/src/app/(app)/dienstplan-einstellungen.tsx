@@ -79,6 +79,27 @@ export default function DpSettingsScreen() {
         <Text variant="xs" color="textMuted">„–“ = kein Zähler. Unterschreitet die Besetzung den Wert, wird der Zähler im Monatsplan rot. „Verfügbar“ wird rot, sobald mehr Personen ohne Arbeitsplatz sind.</Text>
       </Card>
 
+      <SectionHeader title="Schnellwahl im Änderungsfenster" />
+      <Card style={styles.card}>
+        <Text variant="xs" color="textMuted">Je Arbeitsplatz die Schichten, die beim Ändern eines Dienstes als Knopf erscheinen (z. B. T1/F). „ohne Arbeitsplatz“ mit F, M, S, N gibt es immer.</Text>
+        {s.workplaces.map((w) => (
+          <View key={w.code} style={styles.presetRow}>
+            <Text variant="sm" style={[styles.bold, { width: 44 }]}>{w.code}</Text>
+            {GROUPS.map((g) => {
+              const on = (s.presets[w.code] ?? []).includes(g);
+              return (
+                <Pressable key={g} accessibilityRole="checkbox" aria-checked={on} accessibilityLabel={`${w.code}/${g}`}
+                  onPress={() => set({ presets: { ...s.presets, [w.code]: on ? (s.presets[w.code] ?? []).filter((x) => x !== g) : GROUPS.filter((x) => x === g || (s.presets[w.code] ?? []).includes(x)) } })}
+                  style={[styles.g, { borderColor: c.border, backgroundColor: on ? c.accent : c.surface }]}>
+                  <Text variant="sm" color={on ? 'onAccent' : 'text'} style={styles.bold}>{g}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ))}
+        <Checkbox label="Feinschichten (F1, M1, M2, S1 …) zusätzlich anbieten" checked={s.detailShifts} onChange={(v) => set({ detailShifts: v })} />
+      </Card>
+
       <SectionHeader title="Arbeitsplätze" />
       <Card style={styles.card}>
         {s.workplaces.map((w, i) => (
@@ -188,6 +209,7 @@ const styles = StyleSheet.create({
   minItem: { flexDirection: 'row', alignItems: 'center', flexBasis: 200, flexGrow: 1, borderWidth: 1, borderRadius: 8, paddingLeft: 10 },
   shift: { gap: 8, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
   groups: { flexDirection: 'row', gap: 6 },
+  presetRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   g: { width: 44, height: 44, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   sw: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   swatch: { width: 30, height: 30, borderRadius: 6 },

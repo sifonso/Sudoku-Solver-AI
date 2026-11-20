@@ -2,17 +2,21 @@
 import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { shadow, tokens, useTheme } from '../theme';
-import { Text } from '../ui';
+import { IconButton, Text } from '../ui';
+import { X } from 'lucide-react-native';
 import { cellColors, type DpSettings } from './model';
 
 export function Sheet({ visible, title, onClose, children }: { visible: boolean; title: string; onClose: () => void; children: ReactNode }) {
   const { c } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable accessibilityLabel="Schließen" style={styles.scrim} onPress={onClose} />
+      <Pressable accessibilityLabel="Fenster schließen" style={styles.scrim} onPress={onClose} />
       <View style={[styles.sheet, { backgroundColor: c.surfaceRaised }, shadow('pop')]}>
         <View style={[styles.grabber, { backgroundColor: c.border }]} />
-        <Text variant="lg" accessibilityRole="header" style={styles.title}>{title}</Text>
+        <View style={styles.head}>
+          <Text variant="lg" accessibilityRole="header" style={[styles.title, { flex: 1 }]}>{title}</Text>
+          <IconButton icon={X} label="Schließen" onPress={onClose} />
+        </View>
         <ScrollView contentContainerStyle={styles.body}>{children}</ScrollView>
       </View>
     </Modal>
@@ -74,6 +78,7 @@ const styles = StyleSheet.create({
   },
   grabber: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 8 },
   title: { paddingHorizontal: 16, paddingTop: 12 },
+  head: { flexDirection: 'row', alignItems: 'center', paddingRight: 8 },
   body: { padding: 16, gap: 16 },
   badge: { minWidth: 44, paddingHorizontal: 8, minHeight: 28, borderRadius: tokens.radius.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   badgeSm: { minWidth: 36, minHeight: 22, paddingHorizontal: 4 },

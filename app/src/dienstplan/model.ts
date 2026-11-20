@@ -33,6 +33,37 @@ export interface DpSettings {
   /** Mindestbesetzung je „Arbeitsplatz/Schichtgruppe“ und „Verfügbar“. Reihenfolge = Zählerzeilen. */
   minStaffing: Record<string, number>;
   qualColumns: string[];
+  /** Je Arbeitsplatz die Schichtgruppen, die im Änderungsfenster als Schnellwahl erscheinen. */
+  presets: Record<string, string[]>;
+  /** Feinschichten (F1, M2, S1 …) im Änderungsfenster anbieten. Aus: nur F, M, S, N. */
+  detailShifts: boolean;
+}
+
+/** Zeitlich begrenzter Wechsel des Turnus, z. B. Ausbildung parallel zum Trainer. */
+export interface TempRhythm {
+  id: string;
+  from: string;
+  to: string;
+  /** follow = Dienste einer anderen Person übernehmen, shift = eigenen Rhythmus um Wochen verschieben, none = kein Turnus */
+  kind: 'follow' | 'shift' | 'none';
+  followId?: string | null;
+  weeks?: number;
+  note?: string;
+}
+
+/** Markierung und Kommentar an einem Tag einer Person. */
+export interface DpComment {
+  id: string;
+  staffId: string;
+  date: string;
+  text: string;
+  /** Markierungsfarbe, leer = nur Kommentar */
+  mark: string;
+  authorMemberId: string;
+  authorName: string;
+  authorIsLead: boolean;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 export interface Staff {
@@ -54,6 +85,7 @@ export interface Staff {
   persNr: string;
   whatsapp: string;
   memberId?: string | null;
+  overrides?: TempRhythm[];
 }
 
 export interface Entry { staffId: string; date: string; code: string; flex: boolean }
@@ -68,7 +100,16 @@ export interface DpSeed {
 
 export type SwapStatus = 'open' | 'pending' | 'done' | 'rejected' | 'cancelled';
 export interface SwapRequest { id: string; staffId: string; returnDate: string | null; at: string }
+/** Ein Glied im Tausch: Der Dienst dieser Person an `date` geht an die nächste Person im Ring. date null = gibt nichts ab. */
+export interface SwapLeg { staffId: string; date: string | null; code: string }
 export interface SwapOffer {
+  /** offer = Angebot in der Börse mit Anfragen; direct = vollständiger Vorschlag (1:1 oder Ringtausch) */
+  kind: 'offer' | 'direct';
+  legs: SwapLeg[];
+  /** Personen, die einem direkten Vorschlag zugestimmt haben */
+  accepted: string[];
+  createdByLead: boolean;
+  createdByName: string;
   id: string;
   staffId: string;
   date: string;
@@ -134,14 +175,23 @@ export const DEFAULT_SETTINGS: DpSettings = {
   },
   qualColumns: ['T1', 'T2', 'Ankunft', 'MAUS', 'PANDA AN', 'PANDA AB', 'ARGUS', 'FGB Einweisung',
     'Bereichstrainer Ausbildung', 'Bereichstrainer aktiv'],
+  // Aus der Tabelle „Arbeitszeiten“: Nacht nur an T1 und T2
+  presets: { T1: ['F', 'M', 'S', 'N'], T2: ['F', 'M', 'S', 'N'], PA: ['F', 'M', 'S'], AK: ['F', 'M', 'S'], AN: ['F', 'M', 'S'] },
+  detailShifts: false,
 };
+
+export const GROUP_NAMES: Record<ShiftGroup, string> = { F: 'Frühdienst', M: 'Mitteldienst', S: 'Spätdienst', N: 'Nachtdienst' };
+export const MARK_COLORS = ['#F59E0B', '#8B5CF6', '#0EA5E9', '#EC4899'];
 
 export const COUNTER_ROWS = ['W / WS', 'U', 'UG', 'Z & T', 'K / KID', 'D', 'DT', 'FLEX'];
 
 export const DAY_COLORS = {
   saturdayHead: { bg: '#475569', fg: '#FFFFFF' },
   sunday: '#F0F0F0',
-  holiday: '#E0E0E0',
+  /** Feiertag dezent rosé (Palette „Rose“) */
+  holiday: '#F8E0E7',
+  holidayText: '#5A253E',
+  temp: '#0F766E',
   today: '#00B0F0',
   flexText: '#DC2626',
   under: { bg: '#FECACA', fg: '#991B1B' },
@@ -238,19 +288,48 @@ export const isWork = (code: string, s: DpSettings) => {
 };
 
 export interface Cell {
-  /** Angezeigter Wert: Eintrag, sonst Rhythmus-Grundschicht */
+  /** Angezeigter Wert: Eintrag, sonst Grundrhythmus bzw. vorübergehender Turnus */
   code: string;
+  source: 'entry' | 'rhythm' | 'temp';
+  /** true, wenn kein eigener Eintrag (Rhythmus oder vorübergehender Turnus) */
   fromRhythm: boolean;
   base: string;
   flex: boolean;
   entry: Entry | null;
+  temp: TempRhythm | null;
 }
-export function cellFor(staff: Staff, date: string, entries: Map<string, Entry>, s: DpSettings, mode: 'fein' | 'rhythmus' = 'fein'): Cell {
-  const base = rhythmShift(staff, date, s);
+
+export function tempFor(staff: Staff, date: string): TempRhythm | null {
+  return staff.overrides?.find((o) => o.from <= date && date <= o.to) ?? null;
+}
+
+/** Grundschicht eines Tages unter Berücksichtigung eines vorübergehenden Turnus. */
+function baseFor(staff: Staff, date: string, entries: Map<string, Entry>, s: DpSettings, byId: Map<string, Staff> | undefined, depth: number): { code: string; temp: TempRhythm | null } {
+  const t = tempFor(staff, date);
+  if (!t) return { code: rhythmShift(staff, date, s), temp: null };
+  if (t.kind === 'none') return { code: '', temp: t };
+  if (t.kind === 'shift') {
+    const len = s.rhythmLength || 112;
+    const i = (((rhythmIndex(date, s) + (t.weeks ?? 0) * 7) % len) + len) % len;
+    return { code: staff.rhythm[i] ?? '', temp: t };
+  }
+  const other = t.followId ? byId?.get(t.followId) : undefined;
+  if (!other || depth > 0) return { code: '', temp: t };
+  return { code: cellFor(other, date, entries, s, 'fein', byId, depth + 1).code, temp: t };
+}
+
+export function cellFor(staff: Staff, date: string, entries: Map<string, Entry>, s: DpSettings, mode: 'fein' | 'rhythmus' = 'fein',
+  byId?: Map<string, Staff>, depth = 0): Cell {
+  const b = baseFor(staff, date, entries, s, byId, depth);
   const entry = entries.get(`${staff.id}|${date}`) ?? null;
-  if (mode === 'rhythmus' || !entry || (!entry.code && !entry.flex)) return { code: base, fromRhythm: true, base, flex: entry?.flex ?? false, entry };
-  return { code: entry.code, fromRhythm: false, base, flex: entry.flex, entry };
+  const src = b.temp ? 'temp' : 'rhythm';
+  if (mode === 'rhythmus' || !entry || (!entry.code && !entry.flex)) {
+    return { code: b.code, source: src, fromRhythm: true, base: b.code, flex: entry?.flex ?? false, entry, temp: b.temp };
+  }
+  if (!entry.code) return { code: b.code, source: src, fromRhythm: true, base: b.code, flex: entry.flex, entry, temp: b.temp };
+  return { code: entry.code, source: 'entry', fromRhythm: false, base: b.code, flex: entry.flex, entry, temp: b.temp };
 }
+export const byIdOf = (staff: Staff[]) => new Map(staff.map((x) => [x.id, x]));
 export const entryKey = (staffId: string, date: string) => `${staffId}|${date}`;
 export const indexEntries = (entries: Entry[]) => new Map(entries.map((e) => [entryKey(e.staffId, e.date), e]));
 
@@ -275,9 +354,12 @@ export function dayCounters(date: string, staff: Staff[], entries: Map<string, E
   for (const k of Object.keys(s.minStaffing)) out[k] = 0;
   for (const k of COUNTER_ROWS) out[k] = 0;
   out['Schichtstärke'] = 0;
+  const byId = byIdOf(staff);
   for (const st of staff) {
     if (!st.inPlan) continue;
-    const cell = cellFor(st, date, entries, s);
+    const cell = cellFor(st, date, entries, s, 'fein', byId);
+    // Wer vorübergehend mitläuft (Ausbildung), zählt nicht zur Besetzung
+    if (cell.source === 'temp' && cell.temp?.kind === 'follow') continue;
     if (cell.flex) out.FLEX = (out.FLEX ?? 0) + 1;
     const p = parseCode(cell.code, s);
     if (p.status) {
@@ -299,11 +381,11 @@ export function dayCounters(date: string, staff: Staff[], entries: Map<string, E
 
 // ---------- Jahresübersicht ----------
 export interface YearStats { dienste: number; sonntag: number; feiertag: number; nacht: number; urlaub: number; z: number }
-export function yearStats(staff: Staff, year: number, entries: Map<string, Entry>, s: DpSettings): YearStats & { perMonth: number[] } {
+export function yearStats(staff: Staff, year: number, entries: Map<string, Entry>, s: DpSettings, byId?: Map<string, Staff>): YearStats & { perMonth: number[] } {
   const r = { dienste: 0, sonntag: 0, feiertag: 0, nacht: 0, urlaub: 0, z: 0, perMonth: Array(12).fill(0) as number[] };
   for (let m = 0; m < 12; m++) {
     for (const d of monthDays(year, m)) {
-      const cell = cellFor(staff, d, entries, s);
+      const cell = cellFor(staff, d, entries, s, 'fein', byId);
       const p = parseCode(cell.code, s);
       if (p.status?.code === 'U') r.urlaub++;
       if (p.status?.code === 'Z') r.z++;

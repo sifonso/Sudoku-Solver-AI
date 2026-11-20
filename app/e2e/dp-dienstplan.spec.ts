@@ -1,5 +1,5 @@
 // Dienstplan nach Excel-Muster: Monatsplan, Jahresübersicht, Team, Rhythmus, Einstellungen, Tauschbörse.
-import { expect, loginDp, openTab, test } from './fixtures';
+import { DEMO, expect, loginDp, openTab, test } from './fixtures';
 
 test.describe('Dienstplan', () => {
   test('DP-1 Monatsplan zeigt Personen, Feiertagszeile und Besetzungszähler', async ({ page }) => {
@@ -13,8 +13,7 @@ test.describe('Dienstplan', () => {
     await loginDp(page, 'chef');
     const cell = page.getByRole('button', { name: /^Berger, 2\./ });
     await cell.click();
-    await page.getByRole('radio', { name: 'T2', exact: true }).click();
-    await page.getByRole('radio', { name: /^N\b/ }).click();
+    await page.getByRole('radio', { name: 'T2/N', exact: true }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(cell).toHaveAttribute('aria-label', /T2\/N/);
     await cell.click();
@@ -70,6 +69,9 @@ test.describe('Dienstplan', () => {
     await openTab(page, 'Tausch');
     await page.getByRole('button', { name: 'Annehmen' }).click();
     await expect(page.getByText('Wartet auf Genehmigung').first()).toBeVisible();
+    await openTab(page, 'Mehr');
+    await page.getByRole('radio', { name: 'mein Login' }).click();
+    await openTab(page, 'Tausch');
     await page.getByRole('button', { name: 'Genehmigen' }).click();
     await expect(page.getByText('Getauscht').first()).toBeVisible();
   });
@@ -85,5 +87,66 @@ test.describe('Dienstplan', () => {
     await page.getByRole('button', { name: 'Zurück' }).click();
     await openTab(page, 'Tausch');
     await expect(page.getByText('Ohne Genehmigung')).toBeVisible();
+  });
+
+  test('DP-7 Kommentar mit Markierung: alle dürfen schreiben, ändern nur Verfasser:in', async ({ page }) => {
+    await loginDp(page, 'mira');
+    const cell = page.getByRole('button', { name: /^Carstens, 5\./ });
+    await cell.click();
+    await page.getByLabel('Neuer Kommentar').fill('Fahrgemeinschaft klären');
+    await page.getByRole('radio', { name: /^Markierung #/ }).first().click();
+    await page.getByRole('button', { name: 'Hinzufügen' }).click();
+    await expect(page.getByText('Fahrgemeinschaft klären')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kommentar bearbeiten' })).toBeVisible();
+    await page.getByRole('button', { name: 'Schließen', exact: true }).click();
+    await expect(cell).toHaveAttribute('aria-label', /1 Kommentar/);
+    // FK4/SL sieht den Kommentar, darf ihn aber nicht ändern
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.chef }).click(); // ohne Neuladen, Demodaten bleiben
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await page.getByRole('button', { name: /^Carstens, 5\./ }).click();
+    await expect(page.getByText('Fahrgemeinschaft klären')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kommentar bearbeiten' })).toHaveCount(0);
+  });
+
+  test('DP-8 Tausch am selben Tag aus dem Monatsplan: Vorschlag, Zustimmung, Genehmigung', async ({ page }) => {
+    await loginDp(page, 'chef');
+    // Demo: als Berger handeln und einen Tag finden, an dem Berger und Carstens beide Dienst haben
+    await openTab(page, 'Mehr');
+    await page.getByRole('radio', { name: 'Berger' }).click();
+    await openTab(page, 'Monat');
+    await page.getByRole('button', { name: 'Nächster Monat' }).click();
+    let day = 0;
+    for (let d = 1; d <= 28; d++) {
+      const a = await page.getByRole('button', { name: new RegExp(`^Berger, ${d}\\.:`) }).getAttribute('aria-label');
+      const b = await page.getByRole('button', { name: new RegExp(`^Carstens, ${d}\\.:`) }).getAttribute('aria-label');
+      if (a && b && !/frei|: (U|K|Z|DT)\b/.test(a) && !/frei|: (U|K|Z|DT)\b/.test(b)) { day = d; break; }
+    }
+    expect(day).toBeGreaterThan(0);
+    await page.getByRole('button', { name: new RegExp(`^Carstens, ${day}\\.:`) }).click();
+    await page.getByRole('button', { name: 'Mit Carstens tauschen' }).click();
+    await expect(page.getByText('Ergebnis')).toBeVisible();
+    await expect(page.getByText(/^Berger: .* → /)).toBeVisible();
+    await page.getByRole('button', { name: 'Vorschlag senden' }).click();
+    await openTab(page, 'Mehr');
+    await page.getByRole('radio', { name: 'Carstens' }).click();
+    await openTab(page, 'Tausch');
+    await expect(page.getByText('Wartet auf deine Zustimmung')).toBeVisible();
+    await page.getByRole('button', { name: 'Zustimmen' }).click();
+    await openTab(page, 'Mehr');
+    await page.getByRole('radio', { name: 'mein Login' }).click();
+    await openTab(page, 'Tausch');
+    await page.getByRole('button', { name: 'Genehmigen' }).click();
+    await expect(page.getByText('Getauscht').first()).toBeVisible();
+  });
+
+  test('DP-9 Änderungsfenster: Schnellwahl je Arbeitsplatz und Schicht ohne Arbeitsplatz', async ({ page }) => {
+    await loginDp(page, 'chef');
+    await page.getByRole('button', { name: /^Diehl, 6\./ }).click();
+    await expect(page.getByRole('radio', { name: 'PA/N' })).toHaveCount(0); // Nacht nur an T1/T2
+    await page.getByRole('radio', { name: 'S Spätdienst' }).click();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByRole('button', { name: /^Diehl, 6\./ })).toHaveAttribute('aria-label', /: S$/);
   });
 });

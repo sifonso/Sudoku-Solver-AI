@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useMembers } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
 import { canLead, useDp, useSaveStaff } from '../../../dienstplan/hooks';
-import { displayName, type Staff } from '../../../dienstplan/model';
-import { PickChips } from '../../../dienstplan/ui';
+import { displayName, type Staff, type TempRhythm } from '../../../dienstplan/model';
+import { PersonPicker, PickChips } from '../../../dienstplan/ui';
 import { AppScreen } from '../../../features/AppScreen';
 import { errorText } from '../../../features/errors';
 import { useTheme } from '../../../theme';
@@ -64,6 +64,13 @@ export default function PersonScreen() {
         ) : null}
       </Card>
 
+      {s.inPlan ? (
+        <>
+          <SectionHeader title="Vorübergehender Turnus" />
+          <TempRhythmEditor staff={s} all={dp.data.staff} canEdit={lead} onChange={(overrides) => set({ overrides })} />
+        </>
+      ) : null}
+
       <SectionHeader title="Qualifikationen" />
       <Card style={styles.quals}>
         {dp.data.settings.qualColumns.map((q) => {
@@ -118,3 +125,62 @@ const styles = StyleSheet.create({
   qual: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, flexBasis: 220, flexGrow: 1 },
   bold: { fontFamily: 'Inter_700Bold' },
 });
+
+const toIso = (de: string) => {
+  const m = de.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  return m ? `${m[3]}-${(m[2] ?? '').padStart(2, '0')}-${(m[1] ?? '').padStart(2, '0')}` : null;
+};
+const toDe = (iso: string) => `${iso.slice(8)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+const KIND_LABEL: Record<TempRhythm['kind'], string> = { follow: 'Wie Kolleg:in (z. B. Ausbildung beim Trainer)', shift: 'Eigener Turnus verschoben', none: 'Ohne Turnus' };
+
+/** Zeitlich begrenzter Wechsel: In diesem Zeitraum wird der eigene Grundturnus nicht angezeigt. */
+function TempRhythmEditor({ staff, all, canEdit, onChange }: { staff: Staff; all: Staff[]; canEdit: boolean; onChange: (o: TempRhythm[]) => void }) {
+  const list = staff.overrides ?? [];
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [kind, setKind] = useState<TempRhythm['kind']>('follow');
+  const [followId, setFollowId] = useState<string | null>(null);
+  const [weeks, setWeeks] = useState('1');
+  const [note, setNote] = useState('');
+  const fi = toIso(from), ti = toIso(to);
+  const overlap = !!fi && !!ti && list.some((o) => o.from <= ti && fi <= o.to);
+  const valid = !!fi && !!ti && fi <= ti && !overlap && (kind !== 'follow' || !!followId) && (kind !== 'shift' || Number.isInteger(Number(weeks)));
+  const name = (id?: string | null) => all.find((x) => x.id === id)?.short ?? '?';
+  return (
+    <Card style={{ gap: 10 }}>
+      <Text variant="xs" color="textMuted">Für die Zeit gilt statt des Grundturnus der hier gewählte Turnus; graue Grundturnus-Kürzel werden nicht angezeigt. Feinplan-Einträge haben weiter Vorrang.</Text>
+      {list.length === 0 ? <Text variant="sm" color="textMuted">Keiner eingetragen.</Text> : list.map((o) => (
+        <View key={o.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ flex: 1 }}>
+            <Text variant="sm" style={{ fontFamily: 'Inter_600SemiBold' }}>{toDe(o.from)} – {toDe(o.to)}</Text>
+            <Text variant="xs" color="textMuted">
+              {o.kind === 'follow' ? `Wie ${name(o.followId)}` : o.kind === 'shift' ? `Verschoben um ${o.weeks} Woche(n)` : 'Ohne Turnus'}{o.note ? ` · ${o.note}` : ''}
+            </Text>
+          </View>
+          {canEdit ? <Button label="Entfernen" size="sm" variant="ghost" onPress={() => onChange(list.filter((x) => x.id !== o.id))} /> : null}
+        </View>
+      ))}
+      {canEdit ? (
+        <>
+          <View style={styles.row2}>
+            <View style={styles.f}><TextField label="Von" value={from} onChangeText={setFrom} placeholder="TT.MM.JJJJ" /></View>
+            <View style={styles.f}><TextField label="Bis" value={to} onChangeText={setTo} placeholder="TT.MM.JJJJ" error={overlap ? 'Überschneidet sich mit einem Eintrag.' : undefined} /></View>
+          </View>
+          <PickChips label="Art" showLabel value={kind} onChange={(v) => setKind(v as TempRhythm['kind'])}
+            options={(['follow', 'shift', 'none'] as const).map((k) => ({ value: k, label: KIND_LABEL[k] }))} />
+          {kind === 'follow' ? (
+            <PersonPicker value={followId} onChange={setFollowId} options={all.filter((x) => x.inPlan && x.id !== staff.id).map((x) => ({ value: x.id, label: x.short }))} />
+          ) : null}
+          {kind === 'shift' ? <TextField label="Verschiebung in Wochen (auch negativ)" value={weeks} onChangeText={setWeeks} keyboardType="numbers-and-punctuation" /> : null}
+          <TextField label="Notiz (optional)" value={note} onChangeText={setNote} placeholder="z. B. Einarbeitung T1" />
+          <Button label="Zeitraum hinzufügen" variant="secondary" disabled={!valid} onPress={() => {
+            onChange([...list, { id: `t${Date.now().toString(36)}`, from: fi!, to: ti!, kind, followId: kind === 'follow' ? followId : null, weeks: kind === 'shift' ? Number(weeks) : undefined, note: note.trim() }]
+              .sort((a, b) => a.from.localeCompare(b.from)));
+            setFrom(''); setTo(''); setNote('');
+          }} />
+          <Text variant="xs" color="textMuted">Wirksam nach „Speichern“ unten.</Text>
+        </>
+      ) : null}
+    </Card>
+  );
+}

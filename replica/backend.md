@@ -132,3 +132,10 @@ Import der Excel (Personendaten, Ausgabe nie ins Repository):
 Die SQL-Datei wird über die Management API oder den SQL-Editor im Dashboard ausgeführt. Stand: Im Live-Projekt gibt es noch keinen Betrieb, der Import wartet auf die erste Registrierung.
 
 Abweichung zur Excel: Die Jahresübersicht der Excel zählt S/N-Dienste doppelt als Nachtdienst (Formel zählt „S/N“ und „*/N“). Die App zählt jeden einmal; Dienste, Sonntags- und Feiertagsdienste stimmen mit der Excel überein (geprüft für eine Person 2027: 227 / 32 / 7).
+
+### Nachtrag 2026-11-20: Ringtausch, Kommentare, vorübergehender Turnus
+
+Migration `20261120180000_dienstplan_ring_comments` (live eingespielt, lokal getestet):
+- `dp_swaps` mit `kind` (offer/direct), `legs` (Ring: Dienst von Glied i geht an Glied i+1), `accepted`, `created_by_lead`. Funktionen `dp_propose_swap`, `dp_respond_proposal`; `dp_apply_ring` prüft und schreibt. Tausch am selben Tag (1:1) und Dreieckstausch geprüft. Von FK4/SL angelegte Tausche brauchen keine Genehmigung.
+- `dp_comments`: lesen alle im Betrieb; ändern/löschen nur Verfasser:in, Einträge von FK4/SL alle FK4/SL. Verfasserfelder sind per Trigger unveränderlich.
+- `dp_effective` berücksichtigt `staff.data.overrides` (follow / shift / none).
