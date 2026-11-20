@@ -45,3 +45,4 @@ dist-e2e/
 test-results/
 playwright-report/
 e2e-results.json
+dist-demo/
