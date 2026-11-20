@@ -87,7 +87,7 @@ export default function MemberScreen() {
       {update.isError ? <Banner tone="danger" title={errorText(update.error)} /> : null}
 
       {!isChef ? (
-        <Text variant="sm" color="textMuted">Nur der Chef kann Angaben im Team ändern.</Text>
+        <Text variant="sm" color="textMuted">Nur FK4 / SL kann Angaben im Team ändern.</Text>
       ) : draft ? (
         <>
           <Card style={{ gap: 16 }}>

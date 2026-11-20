@@ -119,3 +119,16 @@ Supabase lehnt im kostenlosen Tarif mit eingebautem Mailversand das Ändern der 
 - RPC `claim_invitation_code(code)` verknüpft das angemeldete Konto mit dem eingeladenen Mitglied; unabhängig von der E-Mail-Adresse. Getestet lokal und live (falscher Code, zweite Verwendung, Groß-/Kleinschreibung).
 - Registrierung „Mit Einladungscode“ und Beitreten für Konten ohne Betrieb in der App.
 - Abschalten der E-Mail-Bestätigung habe ich nicht vorgenommen (Sicherheitseinstellung, Entscheidung des Projekteigentümers); Anleitung in `TESTEN.md`.
+
+## Dienstplan nach Excel-Vorlage (2026-11-20)
+
+Migration `20261120120000_dienstplan` (live eingespielt, lokal getestet): `dp_settings`, `dp_staff` (Grundrhythmus, Qualifikationen, Telefon), `dp_staff_private` (Personalnummer, nur FK4/SL), `dp_entries` (Kürzel je Person und Tag, FLEX), `dp_carpools`, `dp_swaps` mit `dp_swap_requests`. Schreiben am Plan nur FK4/SL bzw. Planer; die Tauschbörse läuft über die Funktionen `dp_offer_swap`, `dp_request_swap`, `dp_accept_request`, `dp_decide_swap`, `dp_cancel_swap`. Ob ein Tausch genehmigt werden muss, steht in `dp_settings.data.swapApproval`.
+
+Import der Excel (Personendaten, Ausgabe nie ins Repository):
+
+    python3 app/scripts/import-dienstplan.py plan.xlsx /tmp/seed.json
+    python3 app/scripts/seed-to-sql.py /tmp/seed.json <firmenadresse> > /tmp/import.sql
+
+Die SQL-Datei wird über die Management API oder den SQL-Editor im Dashboard ausgeführt. Stand: Im Live-Projekt gibt es noch keinen Betrieb, der Import wartet auf die erste Registrierung.
+
+Abweichung zur Excel: Die Jahresübersicht der Excel zählt S/N-Dienste doppelt als Nachtdienst (Formel zählt „S/N“ und „*/N“). Die App zählt jeden einmal; Dienste, Sonntags- und Feiertagsdienste stimmen mit der Excel überein (geprüft für eine Person 2027: 227 / 32 / 7).

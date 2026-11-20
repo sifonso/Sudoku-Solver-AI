@@ -1,5 +1,5 @@
 // F08 Aufgaben: verwalten (S13/S14), Sonderaufgabe aus S04, abhaken in S21.
-import { DEMO, axe, chip, expect, loginAs, openTab, signOut, test } from './fixtures';
+import { DEMO, axe, chip, expect, loginAs, openTab, signOut, test, demoLogin } from './fixtures';
 
 test.describe('F08 Aufgaben', () => {
   test('F08-H1 Standardaufgabe anlegen, erscheint mit Schichttyp und Tagen', async ({ page }) => {
@@ -44,13 +44,15 @@ test.describe('F08 Aufgaben', () => {
     await box.click();
     await expect(box).toBeChecked();
     await signOut(page);
-    await page.getByRole('button', { name: DEMO.chef }).click();
+    await demoLogin(page, 'chef');
     await openTab(page, 'Aufgaben');
     await expect(page.getByText('Kasse zählen und Bericht ablegen').locator('xpath=../..')).toContainText('1× erledigt');
   });
 
   test('F08-H4 Sonderaufgabe aus dem Plan, Mira bekommt Mitteilung und sieht sie bei der Schicht', async ({ page }) => {
     await loginAs(page, 'chef');
+    // Schicht der nächsten Woche, damit sie bei Mira unabhängig vom Wochentag unter „Nächste 14 Tage“ steht
+    await page.getByRole('button', { name: 'Nächste Woche' }).click();
     await chip(page, 'Mira Okafor').first().click();
     await page.getByRole('button', { name: 'Sonderaufgabe' }).click();
     await expect(page.getByText('Nur für Mira Okafor in dieser Schicht.')).toBeVisible();
@@ -61,7 +63,7 @@ test.describe('F08 Aufgaben', () => {
     await page.getByRole('radio', { name: /^Sonder/ }).click();
     await expect(page.getByText('Bäckerlieferung prüfen')).toBeVisible();
     await signOut(page);
-    await page.getByRole('button', { name: DEMO.mira }).click();
+    await demoLogin(page, 'mira');
     await expect(page.getByRole('checkbox', { name: 'Bäckerlieferung prüfen (nur für dich)' })).toBeVisible();
     await page.getByRole('button', { name: /^Benachrichtigungen, 1 ungelesen/ }).click();
     await expect(page.getByLabel(/^Neu: Neue Aufgabe/)).toContainText('Bäckerlieferung prüfen');

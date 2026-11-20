@@ -39,10 +39,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "sh -c 'ulimit -s 65532 2>/dev/null; node --stack-size=60000 node_modules/typescript/bin/tsc --noEmit'",
+    "typecheck": "sh -c 'ulimit -s 65532 2>/dev/null; node --stack-size=60000 --max-old-space-size=7000 node_modules/typescript/bin/tsc --noEmit'",
     "tokens": "python3 ../replica/design/build_tokens.py",
     "export:web": "expo export -p web",
-    "test:domain": "node --experimental-strip-types --no-warnings --test src/domain/domain.test.ts",
+    "test:domain": "node --experimental-strip-types --no-warnings --test src/domain/domain.test.ts src/dienstplan/model.test.ts",
     "test:e2e": "playwright test --project=phone --project=desktop",
     "test:live": "NODE_USE_ENV_PROXY=1 playwright test --project=live",
     "test:load": "NODE_USE_ENV_PROXY=1 node scripts/load-test.cjs"

@@ -77,7 +77,7 @@ const toWarning = (w: Row): Warning => {
 
 // ---- Fehler -----------------------------------------------------------------
 
-function fail(e: PostgrestError | { message?: string; code?: string; status?: number } | null): never {
+export function fail(e: PostgrestError | { message?: string; code?: string; status?: number } | null): never {
   const code = (e as Row | null)?.code as string | undefined;
   const msg = ((e as Row | null)?.message as string | undefined) ?? '';
   if (msg.includes('no_overlapping_absence')) throw new ApiError('absence_overlap');
@@ -96,18 +96,26 @@ function fail(e: PostgrestError | { message?: string; code?: string; status?: nu
   if (msg.includes('missing_field') || msg.includes('invalid_number')) throw new ApiError('invalid_entry');
   if (msg.includes('invalid_code')) throw new ApiError('invalid_code');
   if (msg.includes('already_member')) throw new ApiError('already_member');
+  if (msg.includes('invalid_entry')) throw new ApiError('invalid_entry');
+  if (msg.includes('not_found')) throw new ApiError('not_found');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
   throw new ApiError('network', msg || code || 'unbekannter Fehler');
 }
 // Ohne generierte Datenbanktypen (supabase gen types) sind die Zeilen untypisiert;
 // die to*-Funktionen oben sind die einzige Stelle, an der Spalten gelesen werden.
-async function q(p: PromiseLike<{ data: unknown; error: PostgrestError | null }>): Promise<any> {
+export async function q(p: PromiseLike<{ data: unknown; error: PostgrestError | null }>): Promise<any> {
   const { data, error } = await p;
   if (error) fail(error);
   return data;
 }
 
 // ---- Client -----------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untypisiert wie q()
+let shared: any = null;
+/** Derselbe Client für weitere Module (Dienstplan), damit die Sitzung geteilt wird. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const sharedClient = (): any => shared;
 
 export function createSupabaseApi(url: string, anonKey: string): Api {
   const sb = createClient(url, anonKey, {
@@ -119,6 +127,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       lock: processLock,
     },
   });
+  shared = sb;
   // Token nur im Vordergrund auffrischen (empfohlenes Muster für React Native).
   if (Platform.OS !== 'web') {
     AppState.addEventListener('change', (state) => {

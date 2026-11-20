@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   seg: { flexDirection: 'row', borderRadius: tokens.radius.md, borderWidth: 1, padding: 3, alignSelf: 'flex-start' },
   segItem: { minHeight: 38, paddingHorizontal: 16, borderRadius: tokens.radius.sm, alignItems: 'center', justifyContent: 'center' },
   semibold: { fontFamily: 'Inter_600SemiBold' },
-  tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth, gap: 4 },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', borderBottomWidth: StyleSheet.hairlineWidth, gap: 4 },
   tab: { minHeight: tokens.size.touchMin, paddingHorizontal: 12, justifyContent: 'center', borderBottomWidth: 3 },
 });
 

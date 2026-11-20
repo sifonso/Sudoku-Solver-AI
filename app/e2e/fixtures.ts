@@ -23,17 +23,50 @@ export const test = base.extend<{ guard: void }>({
 export { expect };
 
 export const DEMO = {
-  chef: 'Chef (Jana Wilke)',
-  mira: 'Mitarbeiterin (Mira Okafor)',
+  chef: 'FK4 / SL (Demo)',
+  mira: 'Mitarbeiter:in (Demo)',
 };
+
+// Ältere Bereiche sind keine Reiter mehr, sondern über „Mehr“ erreichbar.
+const VIA_MORE: Record<string, string> = {
+  Plan: '/plan',
+  Personal: '/personal',
+  Aufgaben: '/aufgaben',
+  Schnell: '/schnell',
+  Schichten: '/meine',
+  Schichttausch: '/schichttausch',
+};
+
+/** Navigation per Adresse ohne Neuladen (Router reagiert auf popstate), Demodaten bleiben erhalten. */
+export async function navigate(page: Page, path: string) {
+  await page.evaluate((p) => { window.history.pushState({}, '', p); window.dispatchEvent(new PopStateEvent('popstate', { state: {} })); }, path);
+  await expect(page).toHaveURL(new RegExp(`${path}$`));
+}
+
+/** Anmeldung für die Dienstplan-Tests: landet im Monatsplan. */
+export async function loginDp(page: Page, who: keyof typeof DEMO) {
+  await page.goto('/login');
+  await page.getByRole('button', { name: DEMO[who] }).click();
+  await expect(page).toHaveURL(/\/monat$/);
+  await expect(page.getByText('Besetzung').first()).toBeVisible();
+}
 
 /** Anmeldung über die Demo-Knöpfe. Demodaten leben im Speicher: kein page.goto() danach, sonst ist alles zurückgesetzt. */
 export async function loginAs(page: Page, who: keyof typeof DEMO) {
   await page.goto('/login');
   await page.getByRole('button', { name: DEMO[who] }).click();
+  await expect(page).toHaveURL(/\/monat$/);
+  await openTab(page, who === 'chef' ? 'Plan' : 'Schichten');
   await expect(page).toHaveURL(who === 'chef' ? /\/plan$/ : /\/meine$/);
   // Erst weiter, wenn die Daten da sind (Demo-Latenz ~180 ms pro Abfrage)
   await expect(page.getByText(who === 'chef' ? 'Frühschicht' : /Schichten ·/).first()).toBeVisible();
+}
+
+/** Klick auf einen Demo-Knopf (Anmeldeseite schon offen), danach weiter zur alten Startseite. */
+export async function demoLogin(page: Page, who: keyof typeof DEMO) {
+  await page.getByRole('button', { name: DEMO[who] }).click();
+  await expect(page).toHaveURL(/\/monat$/);
+  await openTab(page, who === 'chef' ? 'Plan' : 'Schichten');
 }
 
 /** Mitarbeiter-Kärtchen im Plan. Der Name ergibt sich aus dem sichtbaren Inhalt (Kürzel, Name, Art). */
@@ -43,7 +76,13 @@ export function chip(page: Page, name: string) {
 
 /** Navigation innerhalb der App ohne Neuladen (Demodaten bleiben erhalten). */
 export async function openTab(page: Page, label: string) {
-  await page.getByRole('tab', { name: new RegExp(label) }).click();
+  const path = VIA_MORE[label];
+  if (path) return navigate(page, path);
+  // Aus einem Unterbildschirm ohne Reiterleiste erst zurück
+  const tab = page.getByRole('tab', { name: new RegExp(label) });
+  const shown = await tab.waitFor({ state: 'visible', timeout: 2000 }).then(() => true, () => false);
+  if (!shown) await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+  await tab.click();
 }
 
 export async function signOut(page: Page) {
@@ -65,5 +104,5 @@ export async function axe(page: Page) {
 
 /** Zeile in der Personal-Liste (S07): Name gefolgt von „Rolle · Beschäftigung“. */
 export function memberRow(page: Page, name: string) {
-  return page.getByRole('button', { name: new RegExp(`${name}.*(Mitarbeiter|Planer|Aufgaben|Chef) ·`) });
+  return page.getByRole('button', { name: new RegExp(`${name}.*(Mitarbeiter|Planer|Aufgaben|FK4 / SL) ·`) });
 }

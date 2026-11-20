@@ -24,7 +24,7 @@ export default function SickScreen() {
     return (
       <AppScreen title="Krank melden" back>
         <Banner tone="success" title="Krankmeldung ist raus."
-          body={`Für ${formatRange(start, end)}. Dein Chef sieht, welche Schichten betroffen sind, und kümmert sich um Ersatz. Gute Besserung!`} />
+          body={`Für ${formatRange(start, end)}. Deine FK4 bzw. SL sieht, welche Schichten betroffen sind, und kümmert sich um Ersatz. Gute Besserung!`} />
         <Button label="Zu meinen Schichten" variant="secondary" onPress={() => router.replace('/meine')} />
       </AppScreen>
     );

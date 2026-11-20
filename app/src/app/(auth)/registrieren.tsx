@@ -70,14 +70,14 @@ export default function RegisterScreen() {
 
   return (
     <AuthFrame eyebrow="Registrieren" title={viaCode ? 'Team beitreten' : 'Betrieb anlegen'}
-      intro={viaCode ? 'Mit dem Code aus deiner Einladung landest du direkt im richtigen Betrieb.' : 'Du wirst Chef deines Betriebs und kannst danach dein Team einladen.'}>
+      intro={viaCode ? 'Mit dem Code aus deiner Einladung landest du direkt im richtigen Betrieb.' : 'Du wirst FK4 / SL deines Betriebs und kannst danach dein Team einladen.'}>
       {failure ? <Banner tone="danger" title={failure} /> : null}
       <SegmentedControl label="Art der Registrierung" value={mode} onChange={(m) => { setMode(m); setTouched(false); }}
         options={[{ value: 'betrieb', label: 'Neuer Betrieb' }, { value: 'code', label: 'Mit Einladungscode' }]} />
       {viaCode ? (
         <TextField label="Einladungscode" value={inviteCode} onChangeText={(v) => setInviteCode(v.toUpperCase())}
           error={show('code')} autoCapitalize="characters" placeholder="K7MP-4QXA" maxLength={9}
-          hint="Den Code bekommst du von deinem Chef." />
+          hint="Den Code bekommst du von deiner FK4 bzw. SL." />
       ) : (<>
       <TextField label="Name des Betriebs" value={company} onChangeText={setCompany} error={show('company')} autoComplete="organization" />
       <TextField

@@ -146,7 +146,7 @@ export interface InviteInput {
 }
 
 export const roleLabel: Record<Role, string> = {
-  chef: 'Chef',
+  chef: 'FK4 / SL',
   planer: 'Planer',
   aufgaben_manager: 'Aufgaben',
   mitarbeiter: 'Mitarbeiter',

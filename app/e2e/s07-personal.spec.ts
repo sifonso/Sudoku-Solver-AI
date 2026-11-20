@@ -64,9 +64,9 @@ test.describe('S07/S08 Personal', () => {
     await memberRow(page, 'Jana Wilke \\(du\\)').click();
     await page.getByRole('radio', { name: 'Planer' }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
-    await expect(page.getByText('Es muss mindestens ein aktiver Chef bleiben.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Es muss mindestens eine aktive FK4 / SL bleiben.', { exact: false })).toBeVisible();
     await page.getByRole('button', { name: 'Sperren' }).click();
-    await expect(page.getByText('Es muss mindestens ein aktiver Chef bleiben.', { exact: false })).toBeVisible();
+    await expect(page.getByText('Es muss mindestens eine aktive FK4 / SL bleiben.', { exact: false })).toBeVisible();
   });
 
   test('P-H4 Gesperrte Person wird nicht mehr vorgeschlagen', async ({ page }) => {

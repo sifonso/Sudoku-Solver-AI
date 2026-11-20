@@ -3,6 +3,9 @@ import { ChevronRight, LogOut, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { roleLabel } from '../../../data/api';
+import { backend } from '../../../data/client';
+import { setDemoAs, useDemoAs, useDp } from '../../../dienstplan/hooks';
+import { PickChips } from '../../../dienstplan/ui';
 import { useActive, useDeleteAccount, useSignOut } from '../../../data/session';
 import type { Role } from '../../../domain/types';
 import { AppScreen } from '../../../features/AppScreen';
@@ -11,14 +14,19 @@ import { Avatar, Banner, Button, Card, ListRow, SectionHeader, Text } from '../.
 
 type Item = { label: string; href: Href; id: string; roles: Role[] | 'all' };
 const ITEMS: Item[] = [
-  { id: 'S21', label: 'Meine Schichten', href: '/meine', roles: ['chef', 'planer'] },
-  { id: 'S20', label: 'Heute im Dienst', href: '/heute', roles: 'all' },
+  { id: 'DP1', label: 'Grundrhythmus (16 Wochen)', href: '/rhythmus', roles: 'all' },
+  { id: 'DP2', label: 'Einstellungen Dienstplan', href: '/dienstplan-einstellungen', roles: ['chef', 'planer'] },
   { id: 'S22', label: 'Urlaub beantragen', href: '/urlaub-beantragen', roles: 'all' },
   { id: 'S23', label: 'Krank melden', href: '/krankmelden', roles: 'all' },
-  { id: 'S24', label: 'Schichttausch', href: '/tausch', roles: ['chef', 'planer', 'aufgaben_manager'] },
-  { id: 'S16', label: 'Schnellaktionen', href: '/schnell', roles: ['chef'] },
   { id: 'S09', label: 'Krankmeldungen', href: '/krankmeldungen', roles: ['chef', 'planer'] },
   { id: 'S10', label: 'Urlaubsanträge', href: '/urlaubsantraege', roles: ['chef', 'planer'] },
+  { id: 'S07', label: 'Logins und Einladungen', href: '/personal', roles: ['chef'] },
+  { id: 'S03', label: 'Wochenplan (Schichttypen)', href: '/plan', roles: ['chef', 'planer'] },
+  { id: 'S21', label: 'Meine Schichten (Wochenplan)', href: '/meine', roles: 'all' },
+  { id: 'S20', label: 'Heute im Dienst', href: '/heute', roles: 'all' },
+  { id: 'S24', label: 'Schichttausch (Wochenplan)', href: '/schichttausch', roles: 'all' },
+  { id: 'S13', label: 'Aufgaben', href: '/aufgaben', roles: 'all' },
+  { id: 'S16', label: 'Schnellaktionen', href: '/schnell', roles: 'all' },
   { id: 'S11', label: 'Statistik', href: '/statistik', roles: ['chef', 'planer'] },
   { id: 'S06', label: 'Schichttypen', href: '/schichttypen', roles: ['chef', 'planer'] },
   { id: 'S19', label: 'Schnellaktionen verwalten', href: '/schnellaktionen-verwalten', roles: ['chef', 'aufgaben_manager'] },
@@ -35,6 +43,8 @@ export default function MoreScreen() {
   const signOut = useSignOut();
   const del = useDeleteAccount();
   const [step, setStep] = useState<'idle' | 'confirm' | 'tenant'>('idle');
+  const dp = useDp();
+  const demoAs = useDemoAs();
   const items = ITEMS.filter((i) => i.roles === 'all' || i.roles.includes(member.role));
   return (
     <AppScreen title="Mehr" eyebrow={tenant.name}>
@@ -52,6 +62,14 @@ export default function MoreScreen() {
             trailing={<ChevronRight size={20} color={c.textMuted} />} />
         ))}
       </Card>
+      {backend === 'demo' && dp.data ? (
+        <Card style={{ gap: 8 }}>
+          <Text variant="sm" style={{ fontFamily: 'Inter_600SemiBold' }}>Demo: im Plan handeln als</Text>
+          <Text variant="xs" color="textMuted">Nur in der Demo. Damit lassen sich Tauschbörse und Anfragen zwischen zwei Personen ausprobieren.</Text>
+          <PickChips label="Person" showLabel value={demoAs ?? ''} onChange={(v) => setDemoAs(v || null)}
+            options={[{ value: '', label: 'mein Login' }, ...dp.data.staff.filter((x) => x.inPlan).map((x) => ({ value: x.id, label: x.short }))]} />
+        </Card>
+      ) : null}
       <Button label="Abmelden" variant="secondary" icon={LogOut} onPress={() => signOut.mutate()} loading={signOut.isPending} />
       <Button label="Designsystem ansehen" variant="ghost" onPress={() => router.push('/design')} />
 
@@ -71,7 +89,7 @@ export default function MoreScreen() {
             <>
               <Text variant="lg">Damit wird auch {tenant.name} gelöscht</Text>
               <Text variant="sm" color="textMuted">
-                Du bist der einzige Chef. Der ganze Betrieb mit Plan, Team, Aufgaben und Protokollen wird endgültig gelöscht. Wenn das Team weitermachen soll, ernenne vorher jemand anderen zum Chef.
+                Du bist die einzige FK4 / SL. Der ganze Betrieb mit Plan, Team, Aufgaben und Protokollen wird endgültig gelöscht. Wenn das Team weitermachen soll, ernenne vorher jemand anderen zur FK4 / SL.
               </Text>
             </>
           )}

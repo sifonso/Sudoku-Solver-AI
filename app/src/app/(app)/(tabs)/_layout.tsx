@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router/tabs';
-import { CalendarDays, CalendarCheck, ClipboardCheck, LayoutGrid, Menu, Repeat, Users, type LucideIcon } from 'lucide-react-native';
+import { CalendarDays, CalendarCheck, CalendarRange, ClipboardCheck, LayoutGrid, Menu, Repeat, Users, type LucideIcon } from 'lucide-react-native';
 import { useActive } from '../../../data/session';
 import type { Role } from '../../../domain/types';
 import { tokens, typeStyle, useTheme } from '../../../theme';
@@ -8,13 +8,17 @@ type TabDef = { name: string; title: string; icon: LucideIcon; roles: Role[] | '
 
 // Höchstens 5 sichtbare Reiter pro Rolle.
 const TABS: TabDef[] = [
-  { name: 'plan', title: 'Plan', icon: CalendarDays, roles: ['chef', 'planer'] },
-  { name: 'meine', title: 'Schichten', icon: CalendarCheck, roles: ['mitarbeiter', 'aufgaben_manager'] },
-  { name: 'personal', title: 'Personal', icon: Users, roles: ['chef'] },
-  { name: 'aufgaben', title: 'Aufgaben', icon: ClipboardCheck, roles: ['chef', 'planer', 'aufgaben_manager'] },
-  { name: 'schnell', title: 'Schnell', icon: LayoutGrid, roles: ['mitarbeiter', 'aufgaben_manager', 'planer'] },
-  { name: 'tausch', title: 'Tausch', icon: Repeat, roles: ['mitarbeiter'] },
+  { name: 'monat', title: 'Monat', icon: CalendarDays, roles: 'all' },
+  { name: 'jahr', title: 'Jahr', icon: CalendarRange, roles: 'all' },
+  { name: 'tausch', title: 'Tausch', icon: Repeat, roles: 'all' },
+  { name: 'team', title: 'Team', icon: Users, roles: 'all' },
   { name: 'mehr', title: 'Mehr', icon: Menu, roles: 'all' },
+  // Ältere Bereiche, erreichbar über „Mehr“
+  { name: 'plan', title: 'Plan', icon: CalendarDays, roles: [] },
+  { name: 'meine', title: 'Schichten', icon: CalendarCheck, roles: [] },
+  { name: 'personal', title: 'Personal', icon: Users, roles: [] },
+  { name: 'aufgaben', title: 'Aufgaben', icon: ClipboardCheck, roles: [] },
+  { name: 'schnell', title: 'Schnell', icon: LayoutGrid, roles: [] },
 ];
 
 export default function TabsLayout() {

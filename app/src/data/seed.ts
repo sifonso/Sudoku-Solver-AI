@@ -4,8 +4,8 @@ import type { Absence, Assignment, Member, Qualification, Shift, ShiftType, Tena
 
 export const DEMO_PASSWORD = 'demo1234';
 export const DEMO_USERS = [
-  { id: 'u-chef', email: 'chef@demo.de', label: 'Chef (Jana Wilke)' },
-  { id: 'u-mira', email: 'mira@demo.de', label: 'Mitarbeiterin (Mira Okafor)' },
+  { id: 'u-chef', email: 'chef@demo.de', label: 'FK4 / SL (Demo)' },
+  { id: 'u-mira', email: 'mira@demo.de', label: 'Mitarbeiter:in (Demo)' },
 ] as const;
 
 export interface DB {
@@ -67,7 +67,7 @@ export function seed(now: number = Date.now()): DB {
     [3, 'st-frueh', ['m-sofia', 'm-paul']], [3, 'st-spaet', ['m-lena', 'm-tom']],
     [4, 'st-frueh', ['m-lena', 'm-mira']], [4, 'st-spaet', ['m-tom']], [4, 'st-nacht', ['m-sofia']],
     [5, 'st-frueh', ['m-paul']], [5, 'st-nacht', ['m-jana']],
-    [7, 'st-frueh', ['m-lena', 'm-mira']], [8, 'st-spaet', ['m-mira']],
+    [7, 'st-frueh', ['m-lena', 'm-mira']], [8, 'st-spaet', ['m-mira']], [9, 'st-spaet', ['m-lena']],
   ];
   for (const [offset, typeId, who] of plan) {
     const type = shiftTypes.find((s) => s.id === typeId)!;
@@ -118,6 +118,6 @@ export function seed(now: number = Date.now()): DB {
     ],
     quickEntries: [],
     // Lena bietet ihre Spätschicht am Donnerstag dieser Woche zum Tausch an.
-    swaps: [{ id: 'sw-lena', tenantId: T, assignmentId: `a-s-st-spaet-${addDays(week, 3)}-m-lena`, offeredBy: 'm-lena', status: 'open', chosenMemberId: null, applicantIds: [], expiresAt: null, createdAt: new Date(now - 3_600_000).toISOString() }],
+    swaps: [{ id: 'sw-lena', tenantId: T, assignmentId: `a-s-st-spaet-${addDays(week, 9)}-m-lena`, offeredBy: 'm-lena', status: 'open', chosenMemberId: null, applicantIds: [], expiresAt: null, createdAt: new Date(now - 3_600_000).toISOString() }],
   };
 }

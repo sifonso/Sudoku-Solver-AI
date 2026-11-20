@@ -1,5 +1,5 @@
 // Konto: Abmelden, Konto löschen (Apple-Pflicht).
-import { expect, loginAs, openTab, signOut, test } from './fixtures';
+import { expect, loginAs, openTab, signOut, test, demoLogin } from './fixtures';
 
 test.describe('Konto', () => {
   test('ACC-H1 Abmelden führt zur Anmeldung, Zurück führt nicht zurück in die App', async ({ page }) => {
@@ -17,7 +17,7 @@ test.describe('Konto', () => {
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
     await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/monat$/);
     await openTab(page, 'Mehr');
     await page.getByRole('button', { name: 'Konto löschen' }).click();
     await page.getByRole('button', { name: 'Endgültig löschen' }).click();
@@ -37,7 +37,7 @@ test.describe('Konto', () => {
     await page.getByRole('button', { name: 'Abbrechen' }).click();
     await expect(page.getByRole('button', { name: 'Konto löschen' })).toBeVisible();
     await signOut(page);
-    await page.getByRole('button', { name: 'Mitarbeiterin (Mira Okafor)' }).click();
+    await demoLogin(page, 'mira');
     await expect(page).toHaveURL(/\/meine$/);
   });
 });

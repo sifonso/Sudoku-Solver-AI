@@ -79,7 +79,7 @@ export default function PersonalScreen() {
                     leading={<Avatar initials={m.initials} employment={m.employmentType} />}
                     trailing={
                       <View style={styles.trail}>
-                        {m.role === 'chef' ? <Badge label="Chef" tone="accent" /> : null}
+                        {m.role === 'chef' ? <Badge label="FK4 / SL" tone="accent" /> : null}
                         {m.status === 'invited' ? <Badge label="Eingeladen" tone="highlight" /> : null}
                         {m.status === 'locked' ? <Badge label="Gesperrt" tone="danger" /> : null}
                         <ChevronRight size={20} color={c.textMuted} />

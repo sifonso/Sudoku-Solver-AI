@@ -1,13 +1,13 @@
 // F01 Firma registriert sich (S01) und Anmeldung (S02).
-import { DEMO, expect, openTab, signOut, test } from './fixtures';
+import { DEMO, demoLogin, expect, openTab, signOut, test } from './fixtures';
 
 test.describe('F01 Registrierung und Anmeldung', () => {
-  test('F01-H1 Demo-Chef landet im Plan, Mitarbeiterin bei ihren Schichten', async ({ page }) => {
+  test('F01-H1 Demo-Login landet im Monatsplan', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login$/);
     await page.getByRole('button', { name: DEMO.chef }).click();
-    await expect(page).toHaveURL(/\/plan$/);
-    await expect(page.getByText('Café Morgenrot', { exact: false }).first()).toBeVisible();
+    await expect(page).toHaveURL(/\/monat$/);
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
   });
 
   test('F01-H2 neuer Betrieb wird angelegt und hat Standard-Schichttypen', async ({ page }) => {
@@ -18,7 +18,8 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
     await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/monat$/);
+    await openTab(page, 'Plan');
     await expect(page.getByText('Frühschicht').first()).toBeVisible();
     await expect(page.getByText('Spätschicht').first()).toBeVisible();
   });
@@ -49,7 +50,8 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
     await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/monat$/);
+    await openTab(page, 'Plan');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
@@ -62,7 +64,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
     await page.getByRole('button', { name: 'Betrieb anlegen' }).dblclick();
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/monat$/);
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
 
@@ -107,7 +109,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await expect(page.getByLabel('Passwort')).toBeFocused();
     await page.keyboard.type('demo1234');
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/meine$/);
+    await expect(page).toHaveURL(/\/monat$/);
   });
 
   test('S02-E2 Geschützte Seite ohne Login führt zur Anmeldung', async ({ page }) => {
@@ -117,7 +119,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
 
   test('F01-H4 Einladungscode: Chef lädt ein, neue Person registriert sich mit Code und landet im Betrieb', async ({ page }) => {
     await page.goto('/login');
-    await page.getByRole('button', { name: DEMO.chef }).click();
+    await demoLogin(page, 'chef');
     await expect(page.getByText('Frühschicht').first()).toBeVisible();
     await openTab(page, 'Personal');
     await page.getByRole('button', { name: 'Einladen' }).click();
@@ -136,7 +138,8 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await page.getByLabel('Passwort').filter({ visible: true }).fill('geheim123');
     await page.getByRole('checkbox').filter({ visible: true }).click();
     await page.getByRole('button', { name: 'Konto anlegen und beitreten' }).click();
-    await expect(page).toHaveURL(/\/meine$/);
+    await expect(page).toHaveURL(/\/monat$/);
+    await openTab(page, 'Schichten');
     await expect(page.getByText('Hallo Nora')).toBeVisible();
     await expect(page.getByText('Café Morgenrot').first()).toBeVisible();
   });

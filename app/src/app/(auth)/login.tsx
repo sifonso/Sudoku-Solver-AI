@@ -41,7 +41,7 @@ export default function LoginScreen() {
       {needsTenant ? (
         <View style={styles.join}>
           <Banner tone="warning" title={`${session?.email ?? 'Dieses Konto'} gehört noch zu keinem Betrieb.`}
-            body="Gib den Einladungscode von deinem Chef ein oder melde dich ab."
+            body="Gib den Einladungscode von deiner FK4 bzw. SL ein oder melde dich ab."
             action={<Button label="Abmelden" size="sm" variant="secondary" onPress={() => signOut.mutate()} />} />
           <TextField label="Einladungscode" value={joinCode} onChangeText={(v) => setJoinCode(v.toUpperCase())} autoCapitalize="characters"
             placeholder="K7MP-4QXA" maxLength={9} error={join.isError ? errorText(join.error) : undefined} />

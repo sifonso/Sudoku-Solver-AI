@@ -1,5 +1,5 @@
 // F05 Urlaub beantragen/genehmigen (S22, S10), F06 Krankmeldung und Ersatz (S23, S09).
-import { DEMO, candidateRow, expect, loginAs, openTab, signOut, test } from './fixtures';
+import { DEMO, candidateRow, expect, loginAs, openTab, signOut, test, demoLogin } from './fixtures';
 
 const year = new Date().getFullYear() + 1; // sicher in der Zukunft, keine Seed-Sperre
 const de = (d: number, m: number, y = year) => `${String(d).padStart(2, '0')}.${String(m).padStart(2, '0')}.${y}`;
@@ -14,7 +14,7 @@ test.describe('F06 Krankmeldung', () => {
     await page.getByRole('button', { name: 'Zu meinen Schichten' }).click();
     await signOut(page);
 
-    await page.getByRole('button', { name: DEMO.chef }).click();
+    await demoLogin(page, 'chef');
     await expect(page.getByText('Frühschicht').first()).toBeVisible();
     await expect(page.getByText(/Abwesend: Mira Okafor \(krank\)/).first()).toBeVisible();
     await page.getByRole('button', { name: /^Benachrichtigungen, 1 ungelesen/ }).click();
@@ -63,7 +63,7 @@ test.describe('F05 Urlaub', () => {
     await page.getByRole('button', { name: 'Zurück', exact: true }).click();
     await signOut(page);
 
-    await page.getByRole('button', { name: DEMO.chef }).click();
+    await demoLogin(page, 'chef');
     await openTab(page, 'Personal');
     await page.getByRole('button', { name: 'Urlaub' }).click();
     await expect(page.getByRole('tab', { name: 'Offen (2)' })).toBeVisible();
@@ -75,7 +75,7 @@ test.describe('F05 Urlaub', () => {
     await page.getByRole('button', { name: 'Zurück', exact: true }).click();
     await signOut(page);
 
-    await page.getByRole('button', { name: DEMO.mira }).click();
+    await demoLogin(page, 'mira');
     await page.getByRole('button', { name: /^Benachrichtigungen, 1 ungelesen/ }).click();
     await expect(page.getByLabel(/^Neu: Urlaub genehmigt/)).toBeVisible();
   });
@@ -106,7 +106,7 @@ test.describe('F05 Urlaub', () => {
     await page.getByRole('button', { name: 'Zurück', exact: true }).click();
     await signOut(page);
 
-    await page.getByRole('button', { name: DEMO.mira }).click();
+    await demoLogin(page, 'mira');
     await page.getByRole('button', { name: 'Urlaub beantragen' }).click();
     await page.getByRole('textbox', { name: 'Von', exact: true }).fill(de(10, 7));
     await page.getByRole('textbox', { name: 'Bis', exact: true }).fill(de(20, 7));
@@ -158,7 +158,7 @@ test.describe('Barrierefreiheit Abwesenheiten', () => {
     expect(await axe(page)).toEqual([]);
     await page.getByRole('button', { name: 'Zurück', exact: true }).click();
     await signOut(page);
-    await page.getByRole('button', { name: DEMO.chef }).click();
+    await demoLogin(page, 'chef');
     await openTab(page, 'Personal');
     await page.getByRole('button', { name: 'Urlaub' }).click();
     await expect(page.getByText('„Hochzeit meiner Schwester“')).toBeVisible();

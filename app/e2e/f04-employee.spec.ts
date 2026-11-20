@@ -1,5 +1,5 @@
 // F04 Mitarbeiter sieht seinen Plan (S21), Mitteilungen (S25), Rollen.
-import { candidateRow, expect, loginAs, signOut, test } from './fixtures';
+import { candidateRow, expect, loginAs, signOut, test, demoLogin } from './fixtures';
 
 test.describe('F04 Mitarbeiter-Sicht', () => {
   test('F04-H1 Chef teilt Mira ein, Mira sieht Schicht und Mitteilung', async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('F04 Mitarbeiter-Sicht', () => {
     await expect(page).toHaveURL(/\/plan$/);
     await signOut(page);
 
-    await page.getByRole('button', { name: 'Mitarbeiterin (Mira Okafor)' }).click();
+    await demoLogin(page, 'mira');
     await expect(page).toHaveURL(/\/meine$/);
     await expect(page.getByText('Neue Schicht')).toBeVisible();
     await expect(page.getByRole('button', { name: /Benachrichtigungen, 1 ungelesen/ })).toBeVisible();
@@ -19,9 +19,9 @@ test.describe('F04 Mitarbeiter-Sicht', () => {
     await expect(page.getByRole('button', { name: 'Benachrichtigungen', exact: true })).toBeVisible({ timeout: 5000 });
   });
 
-  test('F04-H2 Mira sieht nur ihre Reiter', async ({ page }) => {
+  test('F04-H2 Reiter: Monat, Jahr, Tausch, Team, Mehr; alte Bereiche nicht als Reiter', async ({ page }) => {
     await loginAs(page, 'mira');
-    for (const t of ['Schichten', 'Schnell', 'Tausch', 'Mehr']) {
+    for (const t of ['Monat', 'Jahr', 'Tausch', 'Team', 'Mehr']) {
       await expect(page.getByRole('tab', { name: new RegExp(t) })).toBeVisible();
     }
     for (const t of ['Plan', 'Personal', 'Aufgaben']) {

@@ -47,7 +47,7 @@ export default function QuickEntryScreen() {
       {due ? <Banner tone="warning" title={`Fällig seit ${due} Uhr`} /> : null}
       {saved ? (
         saved.outOfRange
-          ? <Banner tone="warning" title="Gespeichert, aber außerhalb der Grenzwerte." body="Bitte Maßnahme ergreifen und den Chef informieren." />
+          ? <Banner tone="warning" title="Gespeichert, aber außerhalb der Grenzwerte." body="Bitte Maßnahme ergreifen und die FK4 bzw. SL informieren." />
           : <Banner tone="success" title="Gespeichert." />
       ) : null}
       {addEntry.isError ? <Banner tone="danger" title={errorText(addEntry.error)} /> : null}

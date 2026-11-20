@@ -34,7 +34,7 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'mitarbeiter', label: 'Mitarbeiter' },
   { value: 'planer', label: 'Planer' },
   { value: 'aufgaben_manager', label: 'Aufgaben' },
-  { value: 'chef', label: 'Chef' },
+  { value: 'chef', label: 'FK4 / SL' },
 ];
 const TYPE_OPTIONS: { value: Employment; label: string }[] = [
   { value: 'vollzeit', label: 'Vollzeit' },

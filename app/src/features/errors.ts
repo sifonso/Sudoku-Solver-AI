@@ -5,11 +5,11 @@ export function errorText(e: unknown): string {
   const code = e instanceof ApiError ? e.code : null;
   switch (code) {
     case 'forbidden': return 'Dafür fehlen dir die Rechte.';
-    case 'last_chef': return 'Es muss mindestens ein aktiver Chef bleiben. Ernenne zuerst jemand anderen zum Chef.';
+    case 'last_chef': return 'Es muss mindestens eine aktive FK4 / SL bleiben. Ernenne zuerst jemand anderen zur FK4 / SL.';
     case 'initials_taken': return 'Dieses Kürzel hat schon jemand im Team.';
     case 'member_limit_reached': return 'Für diesen Betrieb ist die Personenzahl begrenzt. Bitte den Administrator fragen.';
     case 'absence_overlap': return 'Für diesen Zeitraum gibt es schon eine Abwesenheit.';
-    case 'vacation_blocked': return 'In diesem Zeitraum ist eine Urlaubssperre. Bitte einen anderen Zeitraum wählen oder mit dem Chef sprechen.';
+    case 'vacation_blocked': return 'In diesem Zeitraum ist eine Urlaubssperre. Bitte einen anderen Zeitraum wählen oder mit der FK4 bzw. SL sprechen.';
     case 'already_decided': return 'Darüber wurde schon entschieden.';
     case 'swap_not_open': return 'Dieses Angebot ist nicht mehr offen.';
     case 'not_an_applicant': return 'Diese Person hat sich nicht beworben.';
