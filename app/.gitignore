@@ -46,3 +46,4 @@ test-results/
 playwright-report/
 e2e-results.json
 dist-demo/
+dist-single/
