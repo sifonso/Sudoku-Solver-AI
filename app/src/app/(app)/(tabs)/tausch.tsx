@@ -241,7 +241,7 @@ export default function SwapBoardScreen() {
   }
 }
 
-/** Ring als lesbare Kette: „Brunner gibt T1/F (Mo, 4. Jan) → Kaschel“. */
+/** Ring als lesbare Kette: „A gibt T1/F (Mo, 4. Jan) → B“. */
 function Ring({ o, settings, name, legsOverride }: { o: SwapOffer; settings: DpSettings; name: (id: string) => string; legsOverride?: SwapOffer['legs'] }) {
   const { c } = useTheme();
   const st = STATUS[o.status];
