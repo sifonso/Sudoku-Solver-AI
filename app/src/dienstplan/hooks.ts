@@ -83,6 +83,15 @@ export function useSetEntry() {
   });
 }
 
+export function useSetEntries() {
+  const { tenant } = useActive();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (list: Entry[]) => dp.setEntries(tenant.id, list),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] }),
+  });
+}
+
 export function useSaveSettings() {
   const { tenant } = useActive();
   const qc = useQueryClient();

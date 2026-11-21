@@ -149,4 +149,34 @@ test.describe('Dienstplan', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByRole('button', { name: /^Diehl, 6\./ })).toHaveAttribute('aria-label', /: S$/);
   });
+
+  test('DP-10 Autodisposition: Regel setzen, Vorschlag berechnen, übernehmen', async ({ page }) => {
+    await loginDp(page, 'chef');
+    await page.getByRole('button', { name: 'Regelwerk' }).first().click();
+    await page.getByRole('button', { name: /^Person/ }).click();
+    await page.getByRole('radio', { name: 'Berger' }).click();
+    await page.getByRole('checkbox', { name: 'Gesperrte Schichten: N · Nachtdienst' }).click();
+    await page.getByRole('button', { name: 'Regeln für Berger speichern' }).click();
+    await expect(page.getByText('Regeln für Berger gespeichert.')).toBeVisible();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Autodisposition' }).click();
+    await page.getByRole('button', { name: 'Zeitraum: nächster Monat' }).click();
+    await page.getByRole('button', { name: 'Vorschlag berechnen' }).click();
+    await expect(page.getByText(/^\d+ Zuweisungen vom/)).toBeVisible();
+    await page.getByRole('button', { name: /Zuweisungen übernehmen$/ }).click();
+    await expect(page.getByText('Übernommen.', { exact: false })).toBeVisible();
+  });
+
+  test('DP-11 Export Monat als Excel und PDF', async ({ page }, info) => {
+    test.skip(info.project.name === 'phone', 'Download einmal reicht');
+    await loginDp(page, 'chef');
+    for (const [label, ext, magic] of [['Als Excel (.xlsx)', 'xlsx', 'PK'], ['Als PDF', 'pdf', '%PDF']] as const) {
+      await page.getByRole('button', { name: 'Monat exportieren' }).click();
+      const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: label }).click()]);
+      expect(dl.suggestedFilename()).toMatch(new RegExp(`^Dienstplan_\\d{4}-\\d{2}\\.${ext}$`));
+      const fs = await import('node:fs');
+      const head = fs.readFileSync(await dl.path()).subarray(0, 4).toString('latin1');
+      expect(head.startsWith(magic)).toBe(true);
+    }
+  });
 });

@@ -12,11 +12,11 @@ function client() {
   return sb;
 }
 
-const toStaff = (r: Row, persNr: Map<string, string>): Staff => ({
+const toStaff = (r: Row, priv: Map<string, Row>): Staff => ({
   short: '', firstName: '', lastName: '', nr: '', inPlan: false, isLead: false, teamLeadId: null,
   rhythm: [], quals: {}, phonePrivate: '', phoneMobile: '', whatsapp: '',
   ...r.data,
-  id: r.id, sort: r.sort, memberId: r.member_id, persNr: persNr.get(r.id) ?? '',
+  id: r.id, sort: r.sort, memberId: r.member_id, persNr: priv.get(r.id)?.pers_nr ?? '', rules: priv.get(r.id)?.rules ?? undefined,
 });
 
 export function dpSupabase(): DpApi {
@@ -27,10 +27,10 @@ export function dpSupabase(): DpApi {
         q(sb.from('dp_settings').select('data').eq('tenant_id', tenantId).maybeSingle()),
         q(sb.from('dp_staff').select('id, member_id, sort, data').eq('tenant_id', tenantId).order('sort')),
         // Für Mitarbeitende liefert RLS hier keine Zeilen.
-        q(sb.from('dp_staff_private').select('staff_id, pers_nr').eq('tenant_id', tenantId)),
+        q(sb.from('dp_staff_private').select('staff_id, pers_nr, rules').eq('tenant_id', tenantId)),
         q(sb.from('dp_carpools').select('name, members').eq('tenant_id', tenantId).order('name')),
       ]);
-      const pn = new Map<string, string>((priv as Row[]).map((p) => [p.staff_id, p.pers_nr]));
+      const pn = new Map<string, Row>((priv as Row[]).map((p) => [p.staff_id, p]));
       return {
         settings: mergeSettings(settings?.data),
         staff: (staff as Row[]).map((r) => toStaff(r, pn)),
@@ -57,13 +57,17 @@ export function dpSupabase(): DpApi {
         await q(t.upsert({ tenant_id: tenantId, staff_id: e.staffId, date: e.date, code: e.code, flex: e.flex, updated_at: new Date().toISOString() }));
       }
     },
+    async setEntries(tenantId, list) {
+      const rows = list.map((e) => ({ tenant_id: tenantId, staff_id: e.staffId, date: e.date, code: e.code, flex: e.flex, updated_at: new Date().toISOString() }));
+      for (let i = 0; i < rows.length; i += 500) await q(client().from('dp_entries').upsert(rows.slice(i, i + 500)));
+    },
     async saveSettings(tenantId, s: DpSettings) {
       await q(client().from('dp_settings').upsert({ tenant_id: tenantId, data: s, updated_at: new Date().toISOString() }));
     },
     async saveStaff(tenantId, s) {
-      const { id, sort, memberId, persNr, ...data } = s;
+      const { id, sort, memberId, persNr, rules, ...data } = s;
       await q(client().from('dp_staff').upsert({ tenant_id: tenantId, id, sort, member_id: memberId ?? null, data, updated_at: new Date().toISOString() }));
-      await q(client().from('dp_staff_private').upsert({ tenant_id: tenantId, staff_id: id, pers_nr: persNr ?? '' }));
+      await q(client().from('dp_staff_private').upsert({ tenant_id: tenantId, staff_id: id, pers_nr: persNr ?? '', rules: rules ?? {} }));
     },
     async swaps(tenantId) {
       const rows: Row[] = await q(client().from('dp_swaps')

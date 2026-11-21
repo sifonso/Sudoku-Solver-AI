@@ -37,7 +37,33 @@ export interface DpSettings {
   presets: Record<string, string[]>;
   /** Feinschichten (F1, M2, S1 …) im Änderungsfenster anbieten. Aus: nur F, M, S, N. */
   detailShifts: boolean;
+  dispo: DispoRules;
 }
+
+/** Regelwerk der Autodisposition (betriebsweit). */
+export interface DispoRules {
+  /** Arbeitsplatz → nötige Qualifikation (Spalte der Qualifikationsübersicht), leer = keine Prüfung */
+  qualFor: Record<string, string>;
+  /** auch „(X)“ (geplant bzw. in Ausbildung) zählt als qualifiziert */
+  allowPlanned: boolean;
+  usePreferences: boolean;
+  /** Arbeitsplätze im Zeitraum gleichmäßig verteilen */
+  balance: boolean;
+  /** Personen über der Mindestbesetzung trotzdem einem Arbeitsplatz zuweisen */
+  distributeSurplus: boolean;
+}
+
+/** Regeln je Person. Gesundheitliche Einschränkungen sind nur für FK4/SL sichtbar. */
+export interface PersonRules {
+  /** gesperrte Schichtgruppen, z. B. keine Nacht */
+  noGroups: ShiftGroup[];
+  /** gesperrte Arbeitsplätze */
+  noWorkplaces: string[];
+  prefer: string[];
+  avoid: string[];
+  healthNote: string;
+}
+export const EMPTY_RULES: PersonRules = { noGroups: [], noWorkplaces: [], prefer: [], avoid: [], healthNote: '' };
 
 /** Zeitlich begrenzter Wechsel des Turnus, z. B. Ausbildung parallel zum Trainer. */
 export interface TempRhythm {
@@ -86,6 +112,7 @@ export interface Staff {
   whatsapp: string;
   memberId?: string | null;
   overrides?: TempRhythm[];
+  rules?: PersonRules;
 }
 
 export interface Entry { staffId: string; date: string; code: string; flex: boolean }
@@ -178,6 +205,14 @@ export const DEFAULT_SETTINGS: DpSettings = {
   // Aus der Tabelle „Arbeitszeiten“: Nacht nur an T1 und T2
   presets: { T1: ['F', 'M', 'S', 'N'], T2: ['F', 'M', 'S', 'N'], PA: ['F', 'M', 'S'], AK: ['F', 'M', 'S'], AN: ['F', 'M', 'S'] },
   detailShifts: false,
+  dispo: {
+    // T1, T2 und Ankunft heißen in der Qualifikationsübersicht wie die Arbeitsplätze; PA und AK bitte im Regelwerk zuordnen
+    qualFor: { T1: 'T1', T2: 'T2', AN: 'Ankunft', PA: '', AK: '' },
+    allowPlanned: false,
+    usePreferences: true,
+    balance: true,
+    distributeSurplus: true,
+  },
 };
 
 export const GROUP_NAMES: Record<ShiftGroup, string> = { F: 'Frühdienst', M: 'Mitteldienst', S: 'Spätdienst', N: 'Nachtdienst' };
@@ -323,10 +358,11 @@ export function cellFor(staff: Staff, date: string, entries: Map<string, Entry>,
   const b = baseFor(staff, date, entries, s, byId, depth);
   const entry = entries.get(`${staff.id}|${date}`) ?? null;
   const src = b.temp ? 'temp' : 'rhythm';
-  if (mode === 'rhythmus' || !entry || (!entry.code && !entry.flex)) {
-    return { code: b.code, source: src, fromRhythm: true, base: b.code, flex: entry?.flex ?? false, entry, temp: b.temp };
+  // Im vorübergehenden Turnus nur Dienste mit Arbeitsplatz zeigen (z. B. die des Trainers), keine grauen Grundschichten
+  const shown = b.temp && mode === 'fein' && !parseCode(b.code, s).workplace && !parseCode(b.code, s).status ? '' : b.code;
+  if (mode === 'rhythmus' || !entry || !entry.code) {
+    return { code: shown, source: src, fromRhythm: true, base: b.code, flex: entry?.flex ?? false, entry, temp: b.temp };
   }
-  if (!entry.code) return { code: b.code, source: src, fromRhythm: true, base: b.code, flex: entry.flex, entry, temp: b.temp };
   return { code: entry.code, source: 'entry', fromRhythm: false, base: b.code, flex: entry.flex, entry, temp: b.temp };
 }
 export const byIdOf = (staff: Staff[]) => new Map(staff.map((x) => [x.id, x]));
@@ -386,7 +422,7 @@ export function yearStats(staff: Staff, year: number, entries: Map<string, Entry
   for (let m = 0; m < 12; m++) {
     for (const d of monthDays(year, m)) {
       const cell = cellFor(staff, d, entries, s, 'fein', byId);
-      const p = parseCode(cell.code, s);
+      const p = parseCode(cell.code || (cell.source === 'temp' ? cell.base : ''), s);
       if (p.status?.code === 'U') r.urlaub++;
       if (p.status?.code === 'Z') r.z++;
       if (p.status) continue;

@@ -18,6 +18,8 @@ export interface DpApi {
   entries(tenantId: string, from: string, to: string): Promise<Entry[]>;
   /** code '' und flex false löscht den Eintrag (Rhythmus gilt wieder). */
   setEntry(tenantId: string, e: Entry): Promise<void>;
+  /** Mehrere Einträge auf einmal (Autodisposition). Nur FK4/SL. */
+  setEntries(tenantId: string, list: Entry[]): Promise<void>;
   saveSettings(tenantId: string, s: DpSettings): Promise<void>;
   saveStaff(tenantId: string, s: Staff): Promise<void>;
 
@@ -56,6 +58,7 @@ export function mergeSettings(partial?: Partial<DpSettings>): DpSettings {
     ...DEFAULT_SETTINGS, ...(partial ?? {}),
     minStaffing: { ...DEFAULT_SETTINGS.minStaffing, ...(partial?.minStaffing ?? {}) },
     presets: { ...DEFAULT_SETTINGS.presets, ...(partial?.presets ?? {}) },
+    dispo: { ...DEFAULT_SETTINGS.dispo, ...(partial?.dispo ?? {}), qualFor: { ...DEFAULT_SETTINGS.dispo.qualFor, ...(partial?.dispo?.qualFor ?? {}) } },
   };
 }
 
@@ -115,6 +118,7 @@ function fakeStore(): DpApi {
     async load() { await wait(); return clone({ settings: db.settings, staff: db.staff, carpools: db.carpools }); },
     async entries(_t, from, to) { await wait(); return clone(db.entries.filter((e) => e.date >= from && e.date <= to)); },
     async setEntry(_t, e) { await wait(); put(e); },
+    async setEntries(_t, list) { await wait(); list.forEach(put); },
     async saveSettings(_t, s) { await wait(); db.settings = clone(s); },
     async saveStaff(_t, s) {
       await wait();

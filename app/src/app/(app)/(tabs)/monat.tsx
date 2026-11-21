@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { ChevronLeft, ChevronRight, Wand2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { EntryEditor } from '../../../dienstplan/EntryEditor';
@@ -7,8 +8,10 @@ import { useActor, useComments, useDp, useDpEntries, useMe } from '../../../dien
 import { SwapComposer } from '../../../dienstplan/SwapComposer';
 import { DAY_COLORS, MONTHS, byIdOf, cellFor, isWork, monthDays, type Cell, type Staff } from '../../../dienstplan/model';
 import { CodeBadge } from '../../../dienstplan/ui';
+import { ExportMenu } from '../../../dienstplan/ExportMenu';
+import { monthSheet } from '../../../dienstplan/export';
 import { AppScreen } from '../../../features/AppScreen';
-import { Banner, IconButton, SegmentedControl, Skeleton, Text } from '../../../ui';
+import { Banner, Button, IconButton, SegmentedControl, Skeleton, Text } from '../../../ui';
 
 /** Hauptansicht: Monatsplan aller Personen mit Besetzung je Arbeitsplatz und Schicht. */
 export default function MonthScreen() {
@@ -36,7 +39,15 @@ export default function MonthScreen() {
       actions={<>
         <IconButton icon={ChevronLeft} label="Voriger Monat" tone="soft" onPress={() => step(-1)} />
         <IconButton icon={ChevronRight} label="Nächster Monat" tone="soft" onPress={() => step(1)} />
+        <ExportMenu label="Monat exportieren" fileBase={`Dienstplan_${ym.y}-${String(ym.m + 1).padStart(2, '0')}`}
+          sheets={() => (dp.data ? [monthSheet(ym.y, ym.m, dp.data.staff, entries.map, dp.data.settings)] : null)} />
       </>}>
+      {lead ? (
+        <View style={styles.bar}>
+          <Button label="Autodisposition" icon={Wand2} size="sm" variant="secondary" onPress={() => router.push('/autodispo')} />
+          <Button label="Regelwerk" size="sm" variant="ghost" onPress={() => router.push('/regelwerk')} />
+        </View>
+      ) : null}
       <View style={styles.bar}>
         <SegmentedControl label="Ansicht" value={mode} onChange={setMode}
           options={[{ value: 'fein', label: 'Feinplan' }, { value: 'rhythmus', label: 'Rhythmus' }]} />

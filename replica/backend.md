@@ -139,3 +139,11 @@ Migration `20261120180000_dienstplan_ring_comments` (live eingespielt, lokal get
 - `dp_swaps` mit `kind` (offer/direct), `legs` (Ring: Dienst von Glied i geht an Glied i+1), `accepted`, `created_by_lead`. Funktionen `dp_propose_swap`, `dp_respond_proposal`; `dp_apply_ring` prüft und schreibt. Tausch am selben Tag (1:1) und Dreieckstausch geprüft. Von FK4/SL angelegte Tausche brauchen keine Genehmigung.
 - `dp_comments`: lesen alle im Betrieb; ändern/löschen nur Verfasser:in, Einträge von FK4/SL alle FK4/SL. Verfasserfelder sind per Trigger unveränderlich.
 - `dp_effective` berücksichtigt `staff.data.overrides` (follow / shift / none).
+
+### Nachtrag 2026-11-21: Autodisposition, Regelwerk, Export, Offline
+
+- Migration `20261121090000_dienstplan_rules` (live): `dp_staff_private.rules` für Regeln je Person (gesundheitliche Einschränkungen, Vorlieben). Nur FK4/SL und Planer lesen und schreiben (RLS wie Personalnummer).
+- Betriebsweites Regelwerk in `dp_settings.data.dispo`: Qualifikation je Arbeitsplatz, „(X)“ zählt mit, Vorlieben, gleichmäßige Verteilung, Überhang verteilen.
+- Autodisposition (`app/src/dienstplan/dispo.ts`) läuft auf dem Gerät der FK4/SL, Ergebnis wird als Vorschlag gezeigt und erst auf Knopfdruck geschrieben (Upsert in `dp_entries`, RLS: nur can_plan).
+- Export Excel (.xlsx, selbst geschrieben, fflate) und PDF (jsPDF) für Monat und Jahresübersicht. Web: Download; iOS/Android: Teilen-Dialog über expo-sharing. In der Artifact-Vorschau sind Downloads gesperrt.
+- Offline lesen: Im Live-Betrieb werden Dienstplan-Abfragen 7 Tage auf dem Gerät gehalten (TanStack Query Persist, AsyncStorage).

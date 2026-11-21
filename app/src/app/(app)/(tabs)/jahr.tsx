@@ -8,6 +8,8 @@ import {
   type Cell, type DpComment, type DpSettings, type Entry, type Staff,
 } from '../../../dienstplan/model';
 import { PersonPicker } from '../../../dienstplan/ui';
+import { ExportMenu } from '../../../dienstplan/ExportMenu';
+import { yearSheet } from '../../../dienstplan/export';
 import { AppScreen } from '../../../features/AppScreen';
 import { useTheme } from '../../../theme';
 import { Card, IconButton, Skeleton, Text } from '../../../ui';
@@ -37,6 +39,8 @@ export default function YearScreen() {
       actions={<>
         <IconButton icon={ChevronLeft} label="Voriges Jahr" tone="soft" onPress={() => setYear(year - 1)} />
         <IconButton icon={ChevronRight} label="Nächstes Jahr" tone="soft" onPress={() => setYear(year + 1)} />
+        <ExportMenu label="Jahr exportieren" fileBase={`Jahresuebersicht_${staff?.short.replace(/[^A-Za-z0-9ÄÖÜäöüß]+/g, '_') ?? ''}_${year}`}
+          sheets={() => (dp.data && staff ? [yearSheet(year, staff, dp.data.staff, entries.map, dp.data.settings)] : null)} />
       </>}>
       {!dp.data || !settings ? <Skeleton height={300} /> : (
         <>

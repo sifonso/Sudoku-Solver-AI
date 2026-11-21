@@ -3,11 +3,10 @@ import {
   BarlowSemiCondensed_700Bold,
 } from '@expo-google-fonts/barlow-semi-condensed';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryProvider } from '../data/persist';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SessionProvider, useSession } from '../data/session';
@@ -46,19 +45,18 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-  const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 10_000 } } }));
   // Bei Ladefehler der Schriften mit Systemschrift weiter, statt weiß zu bleiben.
   if (!loaded && !error) return null;
   return (
     <SafeAreaProvider>
-      <QueryClientProvider client={client}>
+      <QueryProvider>
         <ThemeProvider>
           <SessionProvider>
             <StatusBar style="auto" />
             <RootStack />
           </SessionProvider>
         </ThemeProvider>
-      </QueryClientProvider>
+      </QueryProvider>
     </SafeAreaProvider>
   );
 }

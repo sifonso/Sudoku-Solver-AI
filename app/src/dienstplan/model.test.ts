@@ -106,10 +106,34 @@ test('Vorübergehender Turnus: wie Kolleg:in, verschoben, ohne; zählt bei Ausbi
   const byId = new Map([['t', trainer], ['z', azubi]]);
   const c1 = cellFor(azubi, '2027-01-04', e, S, 'fein', byId);
   assert.deepEqual([c1.code, c1.source], ['T1/F', 'temp']);
-  assert.equal(cellFor(azubi, '2027-01-11', e, S, 'fein', byId).code, 'F');
+  // Im vorübergehenden Turnus keine grauen Kürzel ohne Arbeitsplatz, die Grundschicht bleibt als base erhalten
+  assert.deepEqual([cellFor(azubi, '2027-01-11', e, S, 'fein', byId).code, cellFor(azubi, '2027-01-11', e, S, 'fein', byId).base], ['', 'F']);
   assert.equal(cellFor(azubi, '2027-01-12', e, S, 'fein', byId).code, '');
   assert.equal(cellFor(azubi, '2027-01-13', e, S, 'fein', byId).source, 'rhythm');
   const cnt = dayCounters('2027-01-04', [trainer, azubi], e, S);
   assert.equal(cnt['T1/F'], 1);
   assert.equal(cnt['Verfügbar'], 0);
+});
+
+test('Autodisposition: Mindestbesetzung nach Qualifikation, Sperren, Vorlieben; Einträge bleiben', async () => {
+  const { autoDispo } = await import('./dispo.ts');
+  const day = '2027-01-04'; // Tag 0: alle mit F laut Rhythmus
+  const q = (t1: string, t2: string) => ({ T1: t1, T2: t2, Ankunft: 'X' });
+  const a = { ...person('a'), quals: q('X', 'X') };
+  const b = { ...person('b'), quals: q('', 'X') };
+  const c = { ...person('c'), quals: q('X', ''), rules: { noGroups: [], noWorkplaces: [], prefer: ['AN'], avoid: [], healthNote: '' } };
+  const d = { ...person('d'), quals: q('X', 'X'), rules: { noGroups: ['F' as const], noWorkplaces: [], prefer: [], avoid: [], healthNote: 'kein Früh' } };
+  const fixed = { ...person('e'), quals: q('X', 'X') };
+  const s = { ...S, minStaffing: { 'T1/F': 1, 'T2/F': 1, 'AN/F': 1 }, dispo: { ...S.dispo, distributeSurplus: false } };
+  const r = autoDispo([a, b, c, d, fixed], [{ staffId: 'e', date: day, code: 'U', flex: false }], s, day, day);
+  const got = Object.fromEntries(r.changes.map((x) => [x.staffId, x.code]));
+  assert.equal(got.b, 'T2/F'); // nur b und a können T2, b kann nur T2
+  assert.equal(got.c, 'AN/F'); // Vorliebe
+  assert.equal(got.a, 'T1/F');
+  assert.equal(got.d, undefined); // Früh gesperrt
+  assert.equal(got.e, undefined); // Urlaub bleibt
+  assert.ok(r.notes.some((n) => n.staffId === 'd'));
+  assert.equal(r.gaps.length, 0);
+  const r2 = autoDispo([b], [], s, day, day);
+  assert.deepEqual(r2.gaps.map((g) => g.key).sort(), ['AN/F', 'T1/F']);
 });

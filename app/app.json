@@ -36,7 +36,8 @@
         {
           "color": "#252940"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "schichtplaner"
   }
