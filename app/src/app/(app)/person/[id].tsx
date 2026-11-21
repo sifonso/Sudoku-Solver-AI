@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useMembers } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
-import { canLead, useDp, useSaveStaff } from '../../../dienstplan/hooks';
+import { canLead, useDeleteStaff, useDp, useSaveStaff } from '../../../dienstplan/hooks';
 import { displayName, type Staff, type TempRhythm } from '../../../dienstplan/model';
 import { PersonPicker, PickChips } from '../../../dienstplan/ui';
 import { AppScreen } from '../../../features/AppScreen';
@@ -26,7 +26,7 @@ export default function PersonScreen() {
 
   useEffect(() => {
     if (!dp.data || s) return;
-    const found = dp.data.staff.find((x) => x.id === id);
+    const found = dp.data.staff.find((x) => x.id === id) ?? dp.data.archived.find((x) => x.id === id);
     const len = dp.data.settings.rhythmLength;
     setS(found ?? {
       id: `p${Date.now().toString(36)}`, short: '', firstName: '', lastName: '', nr: '', sort: dp.data.staff.length + 1,
@@ -104,6 +104,10 @@ export default function PersonScreen() {
           <SectionHeader title="Login" />
           <Card style={styles.card}>
             <Text variant="sm" color="textMuted">Wer mit diesem Login angemeldet ist, sieht seine Zeile hervorgehoben und kann eigene Dienste tauschen.</Text>
+            {!s.memberId ? (
+              <Button label={`${s.firstName || s.short} einladen (Login anlegen)`} variant="secondary"
+                onPress={() => router.push({ pathname: '/mitarbeiter/neu', params: { name: displayName(s), staff: s.id } })} />
+            ) : null}
             <PickChips label="Verknüpft mit" showLabel value={s.memberId ?? ''} onChange={(v) => set({ memberId: v || null })}
               options={[{ value: '', label: 'kein Login' }, ...(members.data ?? []).filter((m) => !linked.has(m.id)).map((m) => ({ value: m.id, label: m.displayName }))]} />
           </Card>
@@ -111,6 +115,9 @@ export default function PersonScreen() {
           {save.isSuccess ? <Banner tone="success" title="Gespeichert." /> : null}
           <Button label="Speichern" size="lg" disabled={!valid} loading={save.isPending}
             onPress={() => save.mutate({ ...s, short: s.short.trim() || s.lastName.trim() })} />
+          {dp.data.staff.some((x) => x.id === s.id) || dp.data.archived.some((x) => x.id === s.id) ? (
+            <Remove staff={s} onArchived={(a) => setS({ ...s, archived: a, inPlan: a ? false : s.inPlan })} />
+          ) : null}
         </>
       ) : null}
     </AppScreen>
@@ -181,6 +188,42 @@ function TempRhythmEditor({ staff, all, canEdit, onChange }: { staff: Staff; all
           <Text variant="xs" color="textMuted">Wirksam nach „Speichern“ unten.</Text>
         </>
       ) : null}
+    </Card>
+  );
+}
+
+/** Aus dem Team entfernen (Plan-Historie bleibt) oder endgültig löschen. */
+function Remove({ staff, onArchived }: { staff: Staff; onArchived: (a: boolean) => void }) {
+  const save = useSaveStaff();
+  const del = useDeleteStaff();
+  const [confirm, setConfirm] = useState<'none' | 'archive' | 'delete'>('none');
+  if (staff.archived) {
+    return (
+      <Card style={{ gap: 10 }}>
+        <Text variant="sm">{staff.short} ist aus dem Team entfernt. Alte Dienste bleiben im Plan und im Protokoll.</Text>
+        <Button label="Wieder ins Team aufnehmen" variant="secondary" loading={save.isPending}
+          onPress={() => save.mutate({ ...staff, archived: false, inPlan: true }, { onSuccess: () => onArchived(false) })} />
+        {confirm === 'delete' ? (
+          <>
+            <Banner tone="danger" title="Endgültig löschen?" body="Person, alle Dienste, Kommentare und Tausche dieser Person werden gelöscht. Das lässt sich nicht rückgängig machen." />
+            <Button label="Endgültig löschen" variant="danger" loading={del.isPending} onPress={() => del.mutate(staff.id, { onSuccess: () => router.replace('/team') })} />
+            <Button label="Abbrechen" variant="ghost" onPress={() => setConfirm('none')} />
+          </>
+        ) : <Button label="Endgültig löschen …" variant="ghost" onPress={() => setConfirm('delete')} />}
+      </Card>
+    );
+  }
+  return (
+    <Card style={{ gap: 10 }}>
+      {confirm === 'archive' ? (
+        <>
+          <Text variant="sm">{staff.short} wird aus Monatsplan, Team und Autodisposition entfernt. Bisherige Dienste bleiben erhalten.</Text>
+          <Button label="Aus dem Team entfernen" variant="danger" loading={save.isPending}
+            onPress={() => save.mutate({ ...staff, archived: true, inPlan: false }, { onSuccess: () => { onArchived(true); setConfirm('none'); } })} />
+          <Button label="Abbrechen" variant="ghost" onPress={() => setConfirm('none')} />
+        </>
+      ) : <Button label="Aus dem Team entfernen …" variant="ghost" onPress={() => setConfirm('archive')} />}
+      {save.isError ? <Banner tone="danger" title={errorText(save.error)} /> : null}
     </Card>
   );
 }

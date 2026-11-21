@@ -1,7 +1,7 @@
 // Dienstplan gegen Supabase (Tabellen dp_* und RPCs aus Migration 20261120120000_dienstplan).
 import { ApiError } from '../data/api';
 import { q, sharedClient } from '../data/supabase';
-import type { DpComment, DpSettings, Staff, SwapOffer } from './model';
+import type { AuditEntry, DpComment, DpSettings, Staff, SwapOffer } from './model';
 import { mergeSettings, type DpApi } from './store';
 
 type Row = Record<string, any>;
@@ -57,9 +57,25 @@ export function dpSupabase(): DpApi {
         await q(t.upsert({ tenant_id: tenantId, staff_id: e.staffId, date: e.date, code: e.code, flex: e.flex, updated_at: new Date().toISOString() }));
       }
     },
-    async setEntries(tenantId, list) {
-      const rows = list.map((e) => ({ tenant_id: tenantId, staff_id: e.staffId, date: e.date, code: e.code, flex: e.flex, updated_at: new Date().toISOString() }));
-      for (let i = 0; i < rows.length; i += 500) await q(client().from('dp_entries').upsert(rows.slice(i, i + 500)));
+    async setEntries(tenantId, list, _actor, source = 'plan') {
+      for (let i = 0; i < list.length; i += 500) {
+        await q(client().rpc('dp_set_entries', { p_tenant: tenantId, p_entries: list.slice(i, i + 500), p_source: source }));
+      }
+    },
+    async deleteStaff(tenantId, id) {
+      await q(client().from('dp_staff').delete().eq('tenant_id', tenantId).eq('id', id));
+    },
+    async saveCarpools(tenantId, list) {
+      await q(client().from('dp_carpools').delete().eq('tenant_id', tenantId));
+      if (list.length) await q(client().from('dp_carpools').insert(list.map((c) => ({ tenant_id: tenantId, name: c.name, members: c.members }))));
+    },
+    async alertLeads(tenantId, title, body) {
+      await q(client().rpc('dp_alert_leads', { p_tenant: tenantId, p_title: title, p_body: body }));
+    },
+    async audit(tenantId, limit) {
+      const rows: Row[] = await q(client().from('dp_audit').select('*').eq('tenant_id', tenantId).order('at', { ascending: false }).limit(limit));
+      return rows.map((r): AuditEntry => ({ id: String(r.id), at: r.at, actorName: r.actor_name, staffId: r.staff_id, date: r.date,
+        oldCode: r.old_code, newCode: r.new_code, source: r.source, text: r.text }));
     },
     async saveSettings(tenantId, s: DpSettings) {
       await q(client().from('dp_settings').upsert({ tenant_id: tenantId, data: s, updated_at: new Date().toISOString() }));

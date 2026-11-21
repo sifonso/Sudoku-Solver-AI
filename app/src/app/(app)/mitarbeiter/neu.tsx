@@ -1,8 +1,9 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Share2, UserPlus } from 'lucide-react-native';
 import { Share, StyleSheet, View } from 'react-native';
 import { useState } from 'react';
 import { useInviteMember } from '../../../data/hooks';
+import { useDp, useSaveStaff } from '../../../dienstplan/hooks';
 import { useActive } from '../../../data/session';
 import { AppScreen } from '../../../features/AppScreen';
 import { errorText } from '../../../features/errors';
@@ -13,7 +14,11 @@ import { Banner, Button, Card, Text, TextField } from '../../../ui';
 export default function InviteScreen() {
   const { tenant, member } = useActive();
   const invite = useInviteMember();
-  const [draft, setDraft] = useState<MemberDraft>({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '', vacationDays: '' });
+  // Aus der Personen-Seite: Name vorbelegen und die Person im Dienstplan nach dem Einladen verknüpfen
+  const params = useLocalSearchParams<{ name?: string; staff?: string }>();
+  const dp = useDp();
+  const saveStaff = useSaveStaff();
+  const [draft, setDraft] = useState<MemberDraft>({ displayName: params.name ?? '', initials: params.name ? initialsOf(params.name) : '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '', vacationDays: '' });
   const [initialsEdited, setInitialsEdited] = useState(false);
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
@@ -33,6 +38,8 @@ export default function InviteScreen() {
       },
       {
         onSuccess: (r) => {
+          const st = params.staff ? dp.data?.staff.find((x) => x.id === params.staff) : undefined;
+          if (st) saveStaff.mutate({ ...st, memberId: r.memberId });
           setDone({ name: draft.displayName.trim(), code: r.code });
           setDraft({ displayName: '', initials: '', role: 'mitarbeiter', employmentType: 'vollzeit', monthlyHoursLimit: '', vacationDays: '' });
           setEmail('');

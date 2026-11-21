@@ -65,7 +65,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await page.getByRole('checkbox').click();
     await page.getByRole('button', { name: 'Betrieb anlegen' }).dblclick();
     await expect(page).toHaveURL(/\/monat$/);
-    await expect(page.getByRole('alert')).toHaveCount(0);
+    await expect(page.getByRole('alert').filter({ hasText: /vergeben|Konto|nicht möglich|Fehler/ })).toHaveCount(0);
   });
 
   test('F01-N1 schon vergebene E-Mail wird gemeldet', async ({ page }) => {

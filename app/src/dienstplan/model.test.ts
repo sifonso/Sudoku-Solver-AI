@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  DEFAULT_SETTINGS as S, cellFor, dayCounters, holidayOf, indexEntries, isWork, parseCode, rhythmIndex, yearStats, type Staff,
+  DEFAULT_SETTINGS as S, EMPTY_RULES, cellFor, dayCounters, holidayOf, indexEntries, isWork, parseCode, rhythmIndex, yearStats, type Staff,
 } from './model.ts';
 import { SwapError, planRing, planSwap } from './swap.ts';
 
@@ -118,13 +118,13 @@ test('Vorübergehender Turnus: wie Kolleg:in, verschoben, ohne; zählt bei Ausbi
 test('Autodisposition: Mindestbesetzung nach Qualifikation, Sperren, Vorlieben; Einträge bleiben', async () => {
   const { autoDispo } = await import('./dispo.ts');
   const day = '2027-01-04'; // Tag 0: alle mit F laut Rhythmus
-  const q = (t1: string, t2: string) => ({ T1: t1, T2: t2, Ankunft: 'X' });
+  const q = (t1: string, t2: string) => ({ T1: t1, T2: t2, Ankunft: 'X', MAUS: 'X' });
   const a = { ...person('a'), quals: q('X', 'X') };
   const b = { ...person('b'), quals: q('', 'X') };
-  const c = { ...person('c'), quals: q('X', ''), rules: { noGroups: [], noWorkplaces: [], prefer: ['AN'], avoid: [], healthNote: '' } };
-  const d = { ...person('d'), quals: q('X', 'X'), rules: { noGroups: ['F' as const], noWorkplaces: [], prefer: [], avoid: [], healthNote: 'kein Früh' } };
+  const c = { ...person('c'), quals: q('X', ''), rules: { ...EMPTY_RULES, prefer: ['AN'] } };
+  const d = { ...person('d'), quals: q('X', 'X'), rules: { ...EMPTY_RULES, noGroups: ['F' as const], healthNote: 'kein Früh' } };
   const fixed = { ...person('e'), quals: q('X', 'X') };
-  const s = { ...S, minStaffing: { 'T1/F': 1, 'T2/F': 1, 'AN/F': 1 }, dispo: { ...S.dispo, distributeSurplus: false } };
+  const s = { ...S, dispo: { ...S.dispo, required: ['T1/F', 'T2/F', 'AN/F'], secondary: [], nakedRest: false } };
   const r = autoDispo([a, b, c, d, fixed], [{ staffId: 'e', date: day, code: 'U', flex: false }], s, day, day);
   const got = Object.fromEntries(r.changes.map((x) => [x.staffId, x.code]));
   assert.equal(got.b, 'T2/F'); // nur b und a können T2, b kann nur T2
@@ -136,4 +136,20 @@ test('Autodisposition: Mindestbesetzung nach Qualifikation, Sperren, Vorlieben; 
   assert.equal(r.gaps.length, 0);
   const r2 = autoDispo([b], [], s, day, day);
   assert.deepEqual(r2.gaps.map((g) => g.key).sort(), ['AN/F', 'T1/F']);
+});
+
+test('Autodisposition: Zusatzdienste in Reihenfolge, Rest ohne Arbeitsplatz, Fahrgemeinschaft gleiche Zeiten', async () => {
+  const { autoDispo, startEnd } = await import('./dispo.ts');
+  const day = '2027-01-04';
+  const all = { T1: 'X', T2: 'X', Ankunft: 'X', MAUS: 'X' };
+  const ppl = ['a', 'b', 'c', 'd'].map((id, i) => ({ ...person(id), sort: i, quals: all }));
+  const s = { ...S, dispo: { ...S.dispo, required: ['T1/F'], secondary: ['T2/F', 'PA/F'], nakedRest: true, balance: false } };
+  const r = autoDispo(ppl, [], s, day, day);
+  assert.deepEqual(r.changes.map((x) => x.code).sort(), ['F', 'PA/F', 'T1/F', 'T2/F']);
+  // Fahrgemeinschaft: c und d sollen gleiche Zeiten bekommen. T1/F und T2/F beginnen 04:30, PA/F hat keine eigene F-Zeit.
+  const r2 = autoDispo(ppl, [], { ...s, dispo: { ...s.dispo, secondary: ['T2/F'] } }, day, day, [{ name: 'FG', members: ['a', 'b'] }]);
+  const code = (id: string) => r2.changes.find((x) => x.staffId === id)!.code;
+  assert.equal(startEnd('T1', 'F', s), '04:30-13:11');
+  assert.equal(code('a'), 'T1/F');
+  assert.equal(code('b'), 'T2/F'); // gleiche Zeit wie Partner a
 });

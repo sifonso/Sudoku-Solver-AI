@@ -9,6 +9,7 @@ import { SwapComposer } from '../../../dienstplan/SwapComposer';
 import { DAY_COLORS, MONTHS, byIdOf, cellFor, isWork, monthDays, type Cell, type Staff } from '../../../dienstplan/model';
 import { CodeBadge } from '../../../dienstplan/ui';
 import { ExportMenu } from '../../../dienstplan/ExportMenu';
+import { requiredGaps } from '../../../dienstplan/dispo';
 import { monthSheet } from '../../../dienstplan/export';
 import { AppScreen } from '../../../features/AppScreen';
 import { Banner, Button, IconButton, SegmentedControl, Skeleton, Text } from '../../../ui';
@@ -26,6 +27,9 @@ export default function MonthScreen() {
   const [swap, setSwap] = useState<{ staffId: string | null; date: string | null }[] | null>(null);
   const me = useMe();
   const lead = useActor().isLead;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const openGaps = useMemo(() => (lead && dp.data && dp.data.staff.some((x) => x.inPlan) && !entries.isLoading
+    ? requiredGaps(days.filter((d) => d >= todayIso), dp.data.staff, entries.map, dp.data.settings) : []), [lead, dp.data, entries.map, entries.isLoading, days, todayIso]);
   const cellForMe = (st: Staff, date: string) => {
     if (!dp.data) return null;
     const code = cellFor(st, date, entries.map, dp.data.settings, 'fein', byIdOf(dp.data.staff)).code;
@@ -57,6 +61,11 @@ export default function MonthScreen() {
             : 'Nur der 16-Wochen-Grundrhythmus, ohne Feinplanung.'}
         </Text>
       </View>
+      {lead && openGaps.length ? (
+        <Banner tone="danger" title={`${openGaps.length} Pflichtdienste in diesem Monat unbesetzt`}
+          body={openGaps.slice(0, 6).map((g) => `${Number(g.date.slice(8))}.: ${g.key}`).join(' · ') + (openGaps.length > 6 ? ' …' : '')}
+          action={<Button label="Lücken füllen" size="sm" variant="secondary" onPress={() => router.push("/autodispo")} />} />
+      ) : null}
       {dp.isError || entries.isError ? <Banner tone="danger" title="Plan konnte nicht geladen werden" body="Zum Aktualisieren nach unten ziehen." /> : null}
       {!dp.data || entries.isLoading ? (
         <Skeleton height={420} />

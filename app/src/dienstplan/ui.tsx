@@ -89,19 +89,19 @@ const styles = StyleSheet.create({
 });
 
 /** Personenwahl, eingeklappt bis zum Antippen (lange Listen auf dem Telefon). */
-export function PersonPicker({ options, value, onChange }: { options: { value: string; label: string }[]; value: string | null; onChange: (v: string) => void }) {
+export function PersonPicker({ options, value, onChange, label = 'Person' }: { options: { value: string; label: string }[]; value: string | null; onChange: (v: string) => void; label?: string }) {
   const [open, setOpen] = useState(false);
   const { c } = useTheme();
   const current = options.find((o) => o.value === value);
   if (!open) {
     return (
-      <Pressable accessibilityRole="button" accessibilityLabel={`Person: ${current?.label ?? 'keine'}, ändern`} onPress={() => setOpen(true)}
+      <Pressable accessibilityRole="button" accessibilityLabel={`${label}: ${current?.label ?? 'keine'}, ändern`} onPress={() => setOpen(true)}
         style={[styles.personBtn, { borderColor: c.border, backgroundColor: c.surface }]}>
-        <Text variant="label" color="textMuted">Person</Text>
+        <Text variant="label" color="textMuted">{label}</Text>
         <Text variant="base" style={styles.badgeText}>{current?.label ?? '–'}</Text>
         <Text variant="sm" color="textMuted">ändern</Text>
       </Pressable>
     );
   }
-  return <PickChips label="Person" showLabel value={value} options={options} onChange={(v) => { onChange(v); setOpen(false); }} />;
+  return <PickChips label={label} showLabel value={value} options={options} onChange={(v) => { onChange(v); setOpen(false); }} />;
 }

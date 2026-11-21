@@ -17,6 +17,7 @@ const ITEMS: Item[] = [
   { id: 'DP1', label: 'Grundrhythmus (16 Wochen)', href: '/rhythmus', roles: 'all' },
   { id: 'DP3', label: 'Autodisposition', href: '/autodispo', roles: ['chef', 'planer'] },
   { id: 'DP4', label: 'Regelwerk', href: '/regelwerk', roles: ['chef', 'planer'] },
+  { id: 'DP5', label: 'Planungsprotokoll', href: '/planungsprotokoll', roles: ['chef', 'planer'] },
   { id: 'DP2', label: 'Einstellungen Dienstplan', href: '/dienstplan-einstellungen', roles: ['chef', 'planer'] },
   { id: 'S22', label: 'Urlaub beantragen', href: '/urlaub-beantragen', roles: 'all' },
   { id: 'S23', label: 'Krank melden', href: '/krankmelden', roles: 'all' },
@@ -36,6 +37,7 @@ const ITEMS: Item[] = [
   { id: 'S27', label: 'Profil und Verfügbarkeit', href: '/profil', roles: 'all' },
   { id: 'S26', label: 'Einstellungen', href: '/einstellungen', roles: 'all' },
   { id: 'S28', label: 'Datenexport', href: '/abo', roles: ['chef'] },
+  { id: 'APP', label: 'Änderungen an der App', href: '/aenderungen', roles: 'all' },
 ];
 
 /** Mehr: alles, was nicht in die Reiter passt. */

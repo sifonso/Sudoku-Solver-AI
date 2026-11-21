@@ -153,18 +153,29 @@ test.describe('Dienstplan', () => {
   test('DP-10 Autodisposition: Regel setzen, Vorschlag berechnen, übernehmen', async ({ page }) => {
     await loginDp(page, 'chef');
     await page.getByRole('button', { name: 'Regelwerk' }).first().click();
-    await page.getByRole('button', { name: /^Person/ }).click();
+    await page.getByRole('button', { name: /^Person:/ }).click();
     await page.getByRole('radio', { name: 'Berger' }).click();
     await page.getByRole('checkbox', { name: 'Gesperrte Schichten: N · Nachtdienst' }).click();
+    await page.getByRole('checkbox', { name: 'Bevorzugte Schichten: F' }).click();
     await page.getByRole('button', { name: 'Regeln für Berger speichern' }).click();
     await expect(page.getByText('Regeln für Berger gespeichert.')).toBeVisible();
     await page.getByRole('button', { name: 'Zurück', exact: true }).click();
     await page.getByRole('button', { name: 'Autodisposition' }).click();
     await page.getByRole('button', { name: 'Zeitraum: nächster Monat' }).click();
     await page.getByRole('button', { name: 'Vorschlag berechnen' }).click();
-    await expect(page.getByText(/^\d+ Zuweisungen vom/)).toBeVisible();
-    await page.getByRole('button', { name: /Zuweisungen übernehmen$/ }).click();
-    await expect(page.getByText('Übernommen.', { exact: false })).toBeVisible();
+    await expect(page.getByText(/^Vorschlag .*: \d+ Einträge$/)).toBeVisible();
+    // Nachbearbeiten im Entwurf: erste vorgeschlagene Zelle ändern
+    await page.getByRole('button', { name: /\(Vorschlag\)$/ }).first().click();
+    await page.getByRole('radio', { name: 'S Spätdienst' }).click();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await page.getByRole('button', { name: /^Veröffentlichen/ }).click();
+    await expect(page.getByText('Veröffentlicht.', { exact: false })).toBeVisible();
+    // Protokoll zeigt die Autodisposition
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Planungsprotokoll/ }).click();
+    await expect(page.getByText(/→/).filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText('Autodisposition', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   });
 
   test('DP-11 Export Monat als Excel und PDF', async ({ page }, info) => {
@@ -178,5 +189,39 @@ test.describe('Dienstplan', () => {
       const head = fs.readFileSync(await dl.path()).subarray(0, 4).toString('latin1');
       expect(head.startsWith(magic)).toBe(true);
     }
+  });
+
+  test('DP-12 Änderung durch FK4/SL: Mitteilung an die Person und Eintrag im Planungsprotokoll', async ({ page }) => {
+    await loginDp(page, 'chef');
+    await page.getByRole('button', { name: /^Berger, 9\./ }).click();
+    await page.getByRole('radio', { name: 'T1/S', exact: true }).click();
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Planungsprotokoll/ }).click();
+    await expect(page.getByText(/^Berger am 9\./).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.mira }).click();
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await page.getByRole('button', { name: /^Benachrichtigungen, 1 ungelesen/ }).click();
+    await expect(page.getByText('Dienst geändert').first()).toBeVisible();
+  });
+
+  test('DP-13 Person aus dem Team entfernen und wieder aufnehmen', async ({ page }) => {
+    await loginDp(page, 'chef');
+    await openTab(page, 'Team');
+    await page.getByRole('button', { name: /^Ida Jansen/ }).click();
+    await page.getByRole('button', { name: 'Aus dem Team entfernen …' }).click();
+    await page.getByRole('button', { name: 'Aus dem Team entfernen' }).click();
+    await expect(page.getByText(/ist aus dem Team entfernt/)).toBeVisible();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await openTab(page, 'Monat');
+    await expect(page.getByRole('button', { name: /^Jansen, 1\./ })).toHaveCount(0);
+    await openTab(page, 'Team');
+    await page.getByRole('button', { name: /^Ida Jansen/ }).click();
+    await page.getByRole('button', { name: 'Wieder ins Team aufnehmen' }).click();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await openTab(page, 'Monat');
+    await expect(page.getByRole('button', { name: /^Jansen, 1\./ })).toBeVisible();
   });
 });

@@ -9,18 +9,20 @@ import { Banner, Button, Checkbox, IconButton, Text, TextField } from '../ui';
 import { dp as dpApi, useActor, useCommentAction, useSetEntry } from './hooks';
 import {
   GROUP_NAMES, MARK_COLORS, MONTHS, WEEKDAYS, displayName, groupOf, holidayOf, isWork, parseCode, parseIso, shiftTime,
-  type Cell, type DpComment, type DpSettings, type ShiftGroup, type Staff,
+  type Cell, type DpComment, type DpSettings, type Entry, type ShiftGroup, type Staff,
 } from './model';
 import { canEditComment } from './store';
 import { CodeBadge, PickChips, Sheet } from './ui';
 
 const GROUPS: ShiftGroup[] = ['F', 'M', 'S', 'N'];
 
-export function EntryEditor({ open, staff, date, cell, settings, canEdit, isMe, comments, onClose, onSwap }: {
+export function EntryEditor({ open, staff, date, cell, settings, canEdit, isMe, comments, onClose, onSwap, draftSave }: {
   open: boolean; staff: Staff | null; date: string | null; cell: Cell | null; settings: DpSettings;
   canEdit: boolean; isMe: boolean; comments: DpComment[]; onClose: () => void;
   /** Tauschvorschlag mit diesem Tag öffnen */
   onSwap?: () => void;
+  /** Entwurf (Autodisposition): Änderung nur lokal übernehmen, nichts speichern */
+  draftSave?: (e: Entry) => void;
 }) {
   const { c } = useTheme();
   const save = useSetEntry();
@@ -39,7 +41,10 @@ export function EntryEditor({ open, staff, date, cell, settings, canEdit, isMe, 
   const d = parseIso(date);
   const title = `${staff.short} · ${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
   const time = shiftTime(code, settings);
-  const submit = (next: { code: string; flex: boolean }) => save.mutate({ staffId: staff.id, date, ...next }, { onSuccess: onClose });
+  const submit = (next: { code: string; flex: boolean }) => {
+    if (draftSave) { draftSave({ staffId: staff.id, date, ...next }); onClose(); return; }
+    save.mutate({ staffId: staff.id, date, ...next }, { onSuccess: onClose });
+  };
   const parsed = parseCode(code, settings);
   const detail = settings.detailShifts ? settings.shifts.filter((s) => !parsed.workplace || s.times[parsed.workplace]) : [];
 
@@ -90,13 +95,13 @@ export function EntryEditor({ open, staff, date, cell, settings, canEdit, isMe, 
           {save.isError ? <Banner tone="danger" title={errorText(save.error)} /> : null}
           <View style={styles.actions}>
             <Button label="Speichern" onPress={() => submit({ code, flex })} loading={save.isPending} disabled={!code && !flex} />
-            <Button label="Auf Turnus zurücksetzen" variant="secondary" onPress={() => submit({ code: '', flex: false })} disabled={!cell.entry} />
+            <Button label="Auf Turnus zurücksetzen" variant="secondary" onPress={() => submit({ code: '', flex: false })} disabled={!cell.entry && !draftSave} />
             <Button label="Frei (DT)" variant="ghost" onPress={() => submit({ code: 'DT', flex: false })} />
           </View>
         </View>
       ) : null}
 
-      <View style={styles.actions}>
+      {draftSave ? null : <View style={styles.actions}>
         {isMe && isWork(cell.code, settings) ? (
           <Button label="In Tauschbörse anbieten" variant="secondary"
             onPress={() => { onClose(); router.push({ pathname: '/tausch', params: { offer: date } }); }} />
@@ -106,9 +111,9 @@ export function EntryEditor({ open, staff, date, cell, settings, canEdit, isMe, 
             onPress={() => { onClose(); router.push({ pathname: '/tausch', params: { offer: date, for: staff.id } }); }} />
         ) : null}
         {onSwap ? <Button label={isMe ? 'Tausch vorschlagen' : canEdit ? 'Tausch anlegen' : `Mit ${staff.short} tauschen`} variant="secondary" onPress={onSwap} /> : null}
-      </View>
+      </View>}
 
-      <Comments staffId={staff.id} date={date} comments={comments} />
+      {draftSave ? <Text variant="xs" color="textMuted">Entwurf: Änderungen gelten erst nach „Veröffentlichen“.</Text> : <Comments staffId={staff.id} date={date} comments={comments} />}
       {!canEdit && !isMe ? <Text variant="xs" color="textMuted">{displayName(staff)}</Text> : null}
     </Sheet>
   );

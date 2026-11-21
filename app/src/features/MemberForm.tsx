@@ -30,16 +30,14 @@ export const parseLimit = (s: string) => {
   return v ? Number(v) : null;
 };
 
+// Im Team gibt es nur Mitarbeiter und FK4 / SL; Vollzeit oder Teilzeit.
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'mitarbeiter', label: 'Mitarbeiter' },
-  { value: 'planer', label: 'Planer' },
-  { value: 'aufgaben_manager', label: 'Aufgaben' },
   { value: 'chef', label: 'FK4 / SL' },
 ];
 const TYPE_OPTIONS: { value: Employment; label: string }[] = [
   { value: 'vollzeit', label: 'Vollzeit' },
   { value: 'teilzeit', label: 'Teilzeit' },
-  { value: 'aushilfe', label: 'Aushilfe' },
 ];
 
 /** Gemeinsame Felder für Einladen (S08 neu) und Bearbeiten (S08). */

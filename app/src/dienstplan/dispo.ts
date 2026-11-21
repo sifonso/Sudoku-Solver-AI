@@ -1,52 +1,71 @@
-// Autodisposition: verteilt Personen, die laut (vorübergehendem) Turnus Dienst haben, aber noch keinen
-// Arbeitsplatz, auf die Arbeitsplätze. Reihenfolge: erst die Mindestbesetzung (knappste Plätze zuerst),
-// dann optional der Überhang. Bestehende Einträge (manuell, Abwesenheit, Tausch) bleiben unangetastet.
+// Autodisposition nach Regelwerk. Je Tag:
+// 1. Pflichtdienste (z. B. T1/F, T1/S, T1/N …) je einmal besetzen, knappste zuerst.
+// 2. Danach die Zusatzdienste (z. B. T1/M, T2/M, PA/M, AK/M) in der eingestellten Reihenfolge.
+// 3. Alle übrigen bekommen einen Dienst ohne Arbeitsplatz (F, M, S, N).
+// Grundlage ist die Grundschicht aus dem (vorübergehenden) Turnus; flexible Grundschichten
+// (S/N, M/S, M/F) können in beide Gruppen fallen. Bestehende Einträge bleiben unangetastet.
 import {
   EMPTY_RULES, addDays, byIdOf, cellFor, groupOf, indexEntries, parseCode,
-  type DpSettings, type Entry, type PersonRules, type ShiftGroup, type Staff,
+  type Carpool, type DpSettings, type Entry, type PersonRules, type ShiftGroup, type Staff,
 } from './model.ts';
 
-export interface DispoGap { date: string; key: string; missing: number }
+export interface DispoGap { date: string; key: string; missing: number; required: boolean }
 export interface DispoNote { date: string; staffId: string; text: string }
 export interface DispoResult { changes: Entry[]; gaps: DispoGap[]; notes: DispoNote[] }
 
-/** Schichtgruppe einer Grundschicht (MF → M, S/N → S, M/S und M/F → M). */
-export function baseGroup(code: string, s: DpSettings): ShiftGroup | null {
-  if (!code) return null;
+/** Mögliche Schichtgruppen einer Grundschicht. */
+export function baseGroups(code: string, s: DpSettings): ShiftGroup[] {
+  if (!code) return [];
   const p = parseCode(code, s);
-  if (p.status || p.workplace) return null;
-  if (code === 'S/N') return 'S';
-  if (code === 'M/S' || code === 'M/F' || code === 'MF') return 'M';
-  return groupOf(p.shift, s);
+  if (p.status || p.workplace) return [];
+  if (code === 'S/N') return ['S', 'N'];
+  if (code === 'M/S') return ['M', 'S'];
+  if (code === 'M/F') return ['M', 'F'];
+  if (code === 'MF') return ['M'];
+  const g = groupOf(p.shift, s);
+  return g ? [g] : [];
 }
+
+/** Erste Schichtgruppe (für Anzeige und Tests). */
+export const baseGroup = (code: string, s: DpSettings): ShiftGroup | null => baseGroups(code, s)[0] ?? null;
 
 export function qualified(st: Staff, wp: string, s: DpSettings): boolean {
-  const col = s.dispo.qualFor[wp];
-  if (!col) return true;
-  const v = st.quals?.[col] ?? '';
-  return v === 'X' || (s.dispo.allowPlanned && v === '(X)');
+  const cols = (s.dispo.qualFor[wp] ?? []).filter(Boolean);
+  if (!cols.length) return true;
+  const ok = (col: string) => {
+    const v = st.quals?.[col] ?? '';
+    return v === 'X' || (s.dispo.allowPlanned && v === '(X)');
+  };
+  return s.dispo.qualAll[wp] === false ? cols.some(ok) : cols.every(ok);
 }
 
-const rulesOf = (st: Staff): PersonRules => ({ ...EMPTY_RULES, ...(st.rules ?? {}) });
+export const rulesOf = (st: Staff): PersonRules => ({ ...EMPTY_RULES, ...(st.rules ?? {}) });
 
 export function eligible(st: Staff, wp: string, g: ShiftGroup, s: DpSettings): boolean {
   const r = rulesOf(st);
   if (r.noGroups.includes(g) || r.noWorkplaces.includes(wp)) return false;
-  if (!(s.presets[wp] ?? []).includes(g)) return false;
   return qualified(st, wp, s);
 }
 
-/**
- * Vorschlag für den Zeitraum [from, to]. `entries` sollte den Zeitraum plus 4 Wochen davor enthalten,
- * damit die Verteilung der Arbeitsplätze die jüngste Vergangenheit berücksichtigt.
- */
-export function autoDispo(staff: Staff[], entries: Entry[], s: DpSettings, from: string, to: string): DispoResult {
+/** Beginn und Ende eines Dienstes, z. B. „04:30-13:11“ aus „04:30-13:11 (13:41)“. */
+export function startEnd(wp: string | null, g: ShiftGroup, s: DpSettings): string {
+  const def = s.shifts.find((x) => x.code === g);
+  const t = (wp ? def?.times[wp] : Object.values(def?.times ?? {})[0]) ?? '';
+  return t.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/)?.slice(1, 3).join('-') ?? g;
+}
+
+export function autoDispo(staff: Staff[], entries: Entry[], s: DpSettings, from: string, to: string, carpools: Carpool[] = []): DispoResult {
   const byId = byIdOf(staff);
   const map = indexEntries(entries);
   const changes: Entry[] = [];
   const gaps: DispoGap[] = [];
   const notes: DispoNote[] = [];
-  // Zähler je Person und Arbeitsplatz für gleichmäßige Verteilung
+  const d = s.dispo;
+  const partners = new Map<string, string[]>();
+  if (d.carpools) {
+    for (const cp of carpools) for (const m of cp.members) partners.set(m, cp.members.filter((x) => x !== m));
+  }
+  // Verteilung: Arbeitsplätze der letzten 4 Wochen zählen mit
   const load = new Map<string, number>();
   const bump = (id: string, wp: string) => load.set(`${id}|${wp}`, (load.get(`${id}|${wp}`) ?? 0) + 1);
   for (const e of entries) {
@@ -55,11 +74,11 @@ export function autoDispo(staff: Staff[], entries: Entry[], s: DpSettings, from:
       if (p.workplace) bump(e.staffId, p.workplace);
     }
   }
-  const wps = s.workplaces.map((w) => w.code);
 
   for (let date = from; date <= to; date = addDays(date, 1)) {
     const filled = new Map<string, number>();
-    const free: { st: Staff; g: ShiftGroup }[] = [];
+    const free: { st: Staff; groups: ShiftGroup[] }[] = [];
+    const times = new Map<string, string>(); // staffId → Beginn-Ende heute
     for (const st of staff) {
       if (!st.inPlan) continue;
       const cell = cellFor(st, date, map, s, 'fein', byId);
@@ -67,66 +86,87 @@ export function autoDispo(staff: Staff[], entries: Entry[], s: DpSettings, from:
       if (cell.source === 'entry') {
         const p = parseCode(cell.code, s);
         const g = groupOf(p.shift, s);
-        if (p.workplace && g) filled.set(`${p.workplace}/${g}`, (filled.get(`${p.workplace}/${g}`) ?? 0) + 1);
-        else if (!p.status && g) free.push({ st, g }); // Schicht ohne Arbeitsplatz von Hand eingetragen
+        if (p.workplace && g) {
+          filled.set(`${p.workplace}/${g}`, (filled.get(`${p.workplace}/${g}`) ?? 0) + 1);
+          times.set(st.id, startEnd(p.workplace, g, s));
+        } else if (!p.status && g) free.push({ st, groups: [g] }); // Schicht ohne Arbeitsplatz von Hand
         continue;
       }
-      const g = baseGroup(cell.base, s);
-      if (!g) continue;
-      if (rulesOf(st).noGroups.includes(g)) {
-        notes.push({ date, staffId: st.id, text: `${st.short}: ${g}-Dienst laut Turnus, aber im Regelwerk gesperrt` });
+      const r = rulesOf(st);
+      const all = baseGroups(cell.base, s);
+      const groups = all.filter((g) => !r.noGroups.includes(g));
+      if (all.length && !groups.length) {
+        notes.push({ date, staffId: st.id, text: `${st.short}: ${all.join('/')} laut Turnus, im Regelwerk gesperrt` });
         continue;
       }
-      free.push({ st, g });
+      if (groups.length) free.push({ st, groups });
     }
 
-    const score = (st: Staff, wp: string) => {
-      const r = rulesOf(st);
+    const score = (f: { st: Staff; groups: ShiftGroup[] }, wp: string | null, g: ShiftGroup) => {
+      const r = rulesOf(f.st);
       let v = 0;
-      if (s.dispo.usePreferences) v += (r.prefer.includes(wp) ? 3 : 0) - (r.avoid.includes(wp) ? 3 : 0);
-      if (s.dispo.balance) v -= load.get(`${st.id}|${wp}`) ?? 0;
+      if (d.usePreferences) {
+        if (wp) v += (r.prefer.includes(wp) ? 3 : 0) - (r.avoid.includes(wp) ? 3 : 0);
+        v += (r.preferGroups.includes(g) ? 3 : 0) - (r.avoidGroups.includes(g) ? 3 : 0);
+      }
+      if (d.balance && wp) v -= load.get(`${f.st.id}|${wp}`) ?? 0;
+      if (f.groups.length === 1) v += 2; // Flexible Personen für später aufheben
+      const te = startEnd(wp, g, s);
+      for (const p of partners.get(f.st.id) ?? []) if (times.get(p) === te) v += 6; // Fahrgemeinschaft: gleiche Zeiten
       return v;
     };
-    const take = (st: Staff, wp: string, g: ShiftGroup) => {
-      changes.push({ staffId: st.id, date, code: `${wp}/${g}`, flex: map.get(`${st.id}|${date}`)?.flex ?? false });
-      filled.set(`${wp}/${g}`, (filled.get(`${wp}/${g}`) ?? 0) + 1);
-      bump(st.id, wp);
-      free.splice(free.findIndex((f) => f.st.id === st.id), 1);
+    const take = (f: { st: Staff }, wp: string | null, g: ShiftGroup) => {
+      changes.push({ staffId: f.st.id, date, code: wp ? `${wp}/${g}` : g, flex: map.get(`${f.st.id}|${date}`)?.flex ?? false });
+      if (wp) { filled.set(`${wp}/${g}`, (filled.get(`${wp}/${g}`) ?? 0) + 1); bump(f.st.id, wp); }
+      times.set(f.st.id, startEnd(wp, g, s));
+      free.splice(free.findIndex((x) => x.st.id === f.st.id), 1);
+    };
+    const pool = (wp: string, g: ShiftGroup) => free.filter((f) => f.groups.includes(g) && eligible(f.st, wp, g, s));
+    const fillOne = (key: string, required: boolean) => {
+      const [wp, g] = key.split('/') as [string, ShiftGroup];
+      if ((filled.get(key) ?? 0) > 0) return;
+      const cands = pool(wp, g);
+      if (!cands.length) {
+        gaps.push({ date, key, missing: 1, required });
+        return;
+      }
+      cands.sort((a, b) => score(b, wp, g) - score(a, wp, g) || a.st.sort - b.st.sort);
+      take(cands[0]!, wp, g);
     };
 
-    // 1. Mindestbesetzung, knappste Plätze zuerst
-    const slots: { wp: string; g: ShiftGroup }[] = [];
-    for (const [key, min] of Object.entries(s.minStaffing)) {
-      const [wp, g] = key.split('/') as [string, ShiftGroup | undefined];
-      if (!g || !wps.includes(wp)) continue;
-      for (let i = filled.get(key) ?? 0; i < min; i++) slots.push({ wp, g });
-    }
-    const pool = (wp: string, g: ShiftGroup) => free.filter((f) => f.g === g && eligible(f.st, wp, g, s));
-    slots.sort((a, b) => pool(a.wp, a.g).length - pool(b.wp, b.g).length);
-    for (const slot of slots) {
-      const cands = pool(slot.wp, slot.g);
-      if (!cands.length) {
-        const key = `${slot.wp}/${slot.g}`;
-        const gap = gaps.find((x) => x.date === date && x.key === key);
-        if (gap) gap.missing++; else gaps.push({ date, key, missing: 1 });
-        continue;
-      }
-      cands.sort((a, b) => score(b.st, slot.wp) - score(a.st, slot.wp) || a.st.sort - b.st.sort);
-      take(cands[0]!.st, slot.wp, slot.g);
-    }
-
-    // 2. Überhang: Arbeitsplatz mit der geringsten Besetzung bzw. Vorliebe
-    if (s.dispo.distributeSurplus) {
+    // 1. Pflichtdienste, knappste zuerst
+    [...d.required].sort((a, b) => {
+      const [wa, ga] = a.split('/') as [string, ShiftGroup];
+      const [wb, gb] = b.split('/') as [string, ShiftGroup];
+      return pool(wa, ga).length - pool(wb, gb).length;
+    }).forEach((k) => fillOne(k, true));
+    // 2. Zusatzdienste in fester Reihenfolge
+    d.secondary.forEach((k) => fillOne(k, false));
+    // 3. Übrige: Dienst ohne Arbeitsplatz
+    if (d.nakedRest) {
       for (const f of [...free]) {
-        const options = wps.filter((wp) => (s.presets[wp] ?? []).includes(f.g) && eligible(f.st, wp, f.g, s));
-        if (!options.length) {
-          notes.push({ date, staffId: f.st.id, text: `${f.st.short}: kein passender Arbeitsplatz für ${f.g}` });
-          continue;
-        }
-        options.sort((a, b) => (filled.get(`${a}/${f.g}`) ?? 0) - (filled.get(`${b}/${f.g}`) ?? 0) || score(f.st, b) - score(f.st, a));
-        take(f.st, options[0]!, f.g);
+        const g = [...f.groups].sort((a, b) => score(f, null, b) - score(f, null, a))[0]!;
+        take(f, null, g);
       }
     }
   }
   return { changes, gaps, notes };
+}
+
+/** Pflichtdienste ohne Besetzung im bestehenden Plan (für den Hinweis im Monatsplan). */
+export function requiredGaps(days: string[], staff: Staff[], entries: Map<string, Entry>, s: DpSettings): DispoGap[] {
+  const byId = byIdOf(staff);
+  const out: DispoGap[] = [];
+  for (const date of days) {
+    const filled = new Set<string>();
+    for (const st of staff) {
+      if (!st.inPlan) continue;
+      const c = cellFor(st, date, entries, s, 'fein', byId);
+      const p = parseCode(c.code, s);
+      const g = groupOf(p.shift, s);
+      if (c.source === 'entry' && p.workplace && g) filled.add(`${p.workplace}/${g}`);
+    }
+    for (const k of s.dispo.required) if (!filled.has(k)) out.push({ date, key: k, missing: 1, required: true });
+  }
+  return out;
 }

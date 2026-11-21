@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useSyncExternalStore } from 'react';
 import { backend } from '../data/client';
 import { useActive } from '../data/session';
-import { indexEntries, type DpSettings, type Entry, type Staff } from './model';
+import { indexEntries, type Carpool, type DpSettings, type Entry, type Staff } from './model';
 import { dpFake, type Actor, type DpApi } from './store';
 import { dpSupabase } from './supabaseStore';
 
@@ -13,7 +13,16 @@ export const canLead = (role: string) => role === 'chef' || role === 'planer';
 
 export function useDp() {
   const { tenant } = useActive();
-  return useQuery({ queryKey: ['dp', tenant.id], queryFn: () => dp.load(tenant.id) });
+  return useQuery({
+    queryKey: ['dp', tenant.id], queryFn: () => dp.load(tenant.id),
+    // Entfernte Personen aus allen Ansichten ausblenden, aber für Protokoll und Wiederaufnahme behalten
+    select: (d) => ({ ...d, staff: d.staff.filter((x) => !x.archived), archived: d.staff.filter((x) => x.archived) }),
+  });
+}
+
+export function useAudit(limit = 300) {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['dp-audit', tenant.id, limit], queryFn: () => dp.audit(tenant.id, limit) });
 }
 
 export function useDpEntries(from: string, to: string) {
@@ -76,19 +85,21 @@ export function useCommentAction<T>(fn: (tenantId: string, input: T, actor: Acto
 
 export function useSetEntry() {
   const { tenant } = useActive();
+  const actor = useActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (e: Entry) => dp.setEntry(tenant.id, e),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] }),
+    mutationFn: (e: Entry) => dp.setEntry(tenant.id, e, actor),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] }); qc.invalidateQueries({ queryKey: ['dp-audit', tenant.id] }); qc.invalidateQueries({ queryKey: ['notifications'] }); },
   });
 }
 
 export function useSetEntries() {
   const { tenant } = useActive();
+  const actor = useActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (list: Entry[]) => dp.setEntries(tenant.id, list),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] }),
+    mutationFn: ({ list, source }: { list: Entry[]; source?: string }) => dp.setEntries(tenant.id, list, actor, source),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] }); qc.invalidateQueries({ queryKey: ['dp-audit', tenant.id] }); qc.invalidateQueries({ queryKey: ['notifications'] }); },
   });
 }
 
@@ -97,16 +108,17 @@ export function useSaveSettings() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (s: DpSettings) => dp.saveSettings(tenant.id, s),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp', tenant.id] }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dp', tenant.id] }); qc.invalidateQueries({ queryKey: ['dp-audit', tenant.id] }); },
   });
 }
 
 export function useSaveStaff() {
   const { tenant } = useActive();
+  const actor = useActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (s: Staff) => dp.saveStaff(tenant.id, s),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp', tenant.id] }),
+    mutationFn: (s: Staff) => dp.saveStaff(tenant.id, s, actor),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dp', tenant.id] }); qc.invalidateQueries({ queryKey: ['dp-audit', tenant.id] }); },
   });
 }
 
@@ -124,6 +136,26 @@ export function useSwapAction<T>(fn: (tenantId: string, input: T, actor: Actor) 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dp-swaps', tenant.id] });
       qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
     },
+  });
+}
+
+export function useDeleteStaff() {
+  const { tenant } = useActive();
+  const actor = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => dp.deleteStaff(tenant.id, id, actor),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['dp', tenant.id] }); qc.invalidateQueries({ queryKey: ['dp-entries', tenant.id] }); },
+  });
+}
+
+export function useSaveCarpools() {
+  const { tenant } = useActive();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (list: Carpool[]) => dp.saveCarpools(tenant.id, list),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dp', tenant.id] }),
   });
 }

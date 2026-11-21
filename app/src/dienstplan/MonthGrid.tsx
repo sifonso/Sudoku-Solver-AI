@@ -21,9 +21,11 @@ type Props = {
   mode: 'fein' | 'rhythmus';
   meId: string | null;
   onCell: (s: Staff, date: string, cell: Cell) => void;
+  /** Hervorgehobene Zellen „staffId|date“ (z. B. Vorschlag der Autodisposition) */
+  highlight?: Set<string>;
 };
 
-export function MonthGrid({ days, staff, entries, comments, settings, mode, meId, onCell }: Props) {
+export function MonthGrid({ days, staff, entries, comments, settings, mode, meId, onCell, highlight }: Props) {
   const { c, scheme } = useTheme();
   const [width, setWidth] = useState(0);
   const today = iso(new Date());
@@ -95,7 +97,7 @@ export function MonthGrid({ days, staff, entries, comments, settings, mode, meId
               <View key={s.id} style={styles.row}>
                 {days.map((d) => (
                   <GridCell key={d} staff={s} date={d} entries={entries} byId={byId} settings={settings} mode={mode} w={cellW}
-                    notes={comments.get(`${s.id}|${d}`)} colBg={dayBg(d)} today={d === today}
+                    notes={comments.get(`${s.id}|${d}`)} colBg={dayBg(d)} today={d === today} proposed={highlight?.has(`${s.id}|${d}`) ?? false}
                     border={c.border} text={c.text} muted={c.textMuted} onCell={onCell} />
                 ))}
               </View>
@@ -125,9 +127,9 @@ export function MonthGrid({ days, staff, entries, comments, settings, mode, meId
   );
 }
 
-const GridCell = memo(function GridCell({ staff, date, entries, byId, settings, mode, w, notes, colBg, today, border, text, muted, onCell }: {
+const GridCell = memo(function GridCell({ staff, date, entries, byId, settings, mode, w, notes, colBg, today, proposed, border, text, muted, onCell }: {
   staff: Staff; date: string; entries: Map<string, Entry>; byId: Map<string, Staff>; settings: DpSettings; mode: 'fein' | 'rhythmus';
-  w: number; notes: DpComment[] | undefined; colBg: string | null; today: boolean; border: string; text: string; muted: string;
+  w: number; notes: DpComment[] | undefined; colBg: string | null; today: boolean; proposed: boolean; border: string; text: string; muted: string;
   onCell: Props['onCell'];
 }) {
   const cell = cellFor(staff, date, entries, settings, mode, byId);
@@ -140,10 +142,10 @@ const GridCell = memo(function GridCell({ staff, date, entries, byId, settings, 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${staff.short}, ${Number(date.slice(8))}.: ${cell.code || 'frei'}${ghost && cell.code ? ' laut Rhythmus' : ''}${temp ? ' (vorübergehender Turnus)' : ''}${cell.flex ? ', FLEX' : ''}${notes?.length ? `, ${notes.length} Kommentar${notes.length > 1 ? 'e' : ''}` : ''}`}
+      accessibilityLabel={`${staff.short}, ${Number(date.slice(8))}.: ${cell.code || 'frei'}${proposed ? ' (Vorschlag)' : ''}${ghost && cell.code ? ' laut Rhythmus' : ''}${temp ? ' (vorübergehender Turnus)' : ''}${cell.flex ? ', FLEX' : ''}${notes?.length ? `, ${notes.length} Kommentar${notes.length > 1 ? 'e' : ''}` : ''}`}
       onPress={() => onCell(staff, date, cell)}
       style={({ pressed }) => [styles.cell, { width: w, borderColor: border, backgroundColor: bg, opacity: pressed ? 0.6 : 1 },
-        today && styles.todayCell, temp && !col && styles.tempCell]}
+        today && styles.todayCell, temp && !col && styles.tempCell, proposed && styles.proposed]}
     >
       <Text numberOfLines={1} style={[styles.code, { color: fg, fontSize: w < 40 ? 10 : 11 }, ghost && styles.ghost, cell.flex && styles.bold]}>
         {cell.code}
@@ -168,6 +170,7 @@ const styles = StyleSheet.create({
   sepRow: { height: 26, borderBottomWidth: StyleSheet.hairlineWidth },
   cell: { height: ROW_H, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
   todayCell: { borderLeftWidth: 2, borderRightWidth: 2, borderLeftColor: DAY_COLORS.today, borderRightColor: DAY_COLORS.today },
+  proposed: { borderWidth: 2, borderColor: '#E6732C', borderStyle: 'dashed' },
   tempCell: { borderBottomWidth: 2, borderBottomColor: DAY_COLORS.temp },
   count: { height: 24, alignItems: 'center', justifyContent: 'center', borderRightWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
   code: { fontFamily: 'Inter_600SemiBold' },

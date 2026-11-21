@@ -42,15 +42,23 @@ export interface DpSettings {
 
 /** Regelwerk der Autodisposition (betriebsweit). */
 export interface DispoRules {
-  /** Arbeitsplatz → nötige Qualifikation (Spalte der Qualifikationsübersicht), leer = keine Prüfung */
-  qualFor: Record<string, string>;
+  /** Arbeitsplatz → nötige Qualifikationen (Spalten der Qualifikationsübersicht), leer = keine Prüfung */
+  qualFor: Record<string, string[]>;
+  /** true = alle gewählten Qualifikationen nötig, false = eine genügt */
+  qualAll: Record<string, boolean>;
   /** auch „(X)“ (geplant bzw. in Ausbildung) zählt als qualifiziert */
   allowPlanned: boolean;
   usePreferences: boolean;
   /** Arbeitsplätze im Zeitraum gleichmäßig verteilen */
   balance: boolean;
-  /** Personen über der Mindestbesetzung trotzdem einem Arbeitsplatz zuweisen */
-  distributeSurplus: boolean;
+  /** Zwingend zu besetzen, je einmal pro Tag, in dieser Reihenfolge geprüft */
+  required: string[];
+  /** Danach in dieser Reihenfolge je einmal besetzen */
+  secondary: string[];
+  /** Alle übrigen bekommen einen Dienst ohne Arbeitsplatz (F, M, S) */
+  nakedRest: boolean;
+  /** Fahrgemeinschaften möglichst gleiche Dienstzeiten geben */
+  carpools: boolean;
 }
 
 /** Regeln je Person. Gesundheitliche Einschränkungen sind nur für FK4/SL sichtbar. */
@@ -61,9 +69,11 @@ export interface PersonRules {
   noWorkplaces: string[];
   prefer: string[];
   avoid: string[];
+  preferGroups: ShiftGroup[];
+  avoidGroups: ShiftGroup[];
   healthNote: string;
 }
-export const EMPTY_RULES: PersonRules = { noGroups: [], noWorkplaces: [], prefer: [], avoid: [], healthNote: '' };
+export const EMPTY_RULES: PersonRules = { noGroups: [], noWorkplaces: [], prefer: [], avoid: [], preferGroups: [], avoidGroups: [], healthNote: '' };
 
 /** Zeitlich begrenzter Wechsel des Turnus, z. B. Ausbildung parallel zum Trainer. */
 export interface TempRhythm {
@@ -113,9 +123,24 @@ export interface Staff {
   memberId?: string | null;
   overrides?: TempRhythm[];
   rules?: PersonRules;
+  /** aus dem Team entfernt (Historie bleibt) */
+  archived?: boolean;
 }
 
 export interface Entry { staffId: string; date: string; code: string; flex: boolean }
+/** Planungsprotokoll: eine Änderung am Plan oder an einer Person. */
+export interface AuditEntry {
+  id: string;
+  at: string;
+  actorName: string;
+  staffId: string | null;
+  date: string | null;
+  oldCode: string | null;
+  newCode: string | null;
+  /** plan, tausch, autodispo, person */
+  source: string;
+  text: string;
+}
 export interface Carpool { name: string; members: string[] }
 
 export interface DpSeed {
@@ -206,12 +231,16 @@ export const DEFAULT_SETTINGS: DpSettings = {
   presets: { T1: ['F', 'M', 'S', 'N'], T2: ['F', 'M', 'S', 'N'], PA: ['F', 'M', 'S'], AK: ['F', 'M', 'S'], AN: ['F', 'M', 'S'] },
   detailShifts: false,
   dispo: {
-    // T1, T2 und Ankunft heißen in der Qualifikationsübersicht wie die Arbeitsplätze; PA und AK bitte im Regelwerk zuordnen
-    qualFor: { T1: 'T1', T2: 'T2', AN: 'Ankunft', PA: '', AK: '' },
+    // PA braucht wie T2 die Qualifikation T2; Ankunft und MAUS gehören zum Arbeitsplatz AN. AK bitte im Regelwerk zuordnen.
+    qualFor: { T1: ['T1'], T2: ['T2'], PA: ['T2'], AN: ['Ankunft', 'MAUS'], AK: [] },
+    qualAll: { T1: true, T2: true, PA: true, AN: true, AK: true },
     allowPlanned: false,
     usePreferences: true,
     balance: true,
-    distributeSurplus: true,
+    required: ['T1/F', 'T1/S', 'T1/N', 'T2/F', 'T2/S', 'T2/N', 'PA/F', 'PA/S', 'AN/F', 'AN/M', 'AN/S', 'AK/F', 'AK/S'],
+    secondary: ['T1/M', 'T2/M', 'PA/M', 'AK/M'],
+    nakedRest: true,
+    carpools: true,
   },
 };
 

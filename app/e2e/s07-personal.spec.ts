@@ -19,7 +19,7 @@ test.describe('S07/S08 Personal', () => {
     await page.getByRole('button', { name: 'Einladen' }).click();
     await page.getByLabel('Name').fill('Ömer Yıldız');
     await expect(page.getByLabel('Kürzel')).toHaveValue('ÖY');
-    await page.getByRole('radio', { name: 'Aushilfe' }).click();
+    await page.getByRole('radio', { name: 'Teilzeit' }).click();
     await page.getByLabel('E-Mail').fill('oemer@test.de');
     await page.getByRole('button', { name: 'Einladung senden' }).click();
     await expect(page.getByText('Ömer Yıldız ist eingeladen')).toBeVisible();
@@ -62,7 +62,7 @@ test.describe('S07/S08 Personal', () => {
 
   test('P-N2 Letzter Chef kann sich nicht herabstufen oder sperren', async ({ page }) => {
     await memberRow(page, 'Jana Wilke \\(du\\)').click();
-    await page.getByRole('radio', { name: 'Planer' }).click();
+    await page.getByRole('radio', { name: 'Mitarbeiter', exact: true }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(page.getByText('Es muss mindestens eine aktive FK4 / SL bleiben.', { exact: false })).toBeVisible();
     await page.getByRole('button', { name: 'Sperren' }).click();

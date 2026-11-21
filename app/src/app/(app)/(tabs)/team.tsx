@@ -27,7 +27,15 @@ export default function TeamScreen() {
         { value: 'telefon', label: 'Telefon' }, { value: 'fahr', label: 'Fahrgemeinschaften' },
       ]} />
       {!dp.data ? <Skeleton height={300} /> : tab === 'zuordnung' ? (
-        <Assignment staff={staff} onOpen={open} />
+        <>
+          <Assignment staff={staff} onOpen={open} />
+          {lead && dp.data.archived.length ? (
+            <Card style={{ gap: 0, paddingVertical: 8 }}>
+              <Text variant="lg">Aus dem Team entfernt</Text>
+              {dp.data.archived.map((s) => <ListRow key={s.id} title={displayName(s)} subtitle="antippen zum Wiederaufnehmen oder Löschen" onPress={() => open(s)} />)}
+            </Card>
+          ) : null}
+        </>
       ) : tab === 'quali' ? (
         <Qualifications staff={staff} columns={dp.data.settings.qualColumns} onOpen={lead ? open : undefined} />
       ) : tab === 'telefon' ? (

@@ -147,3 +147,10 @@ Migration `20261120180000_dienstplan_ring_comments` (live eingespielt, lokal get
 - Autodisposition (`app/src/dienstplan/dispo.ts`) läuft auf dem Gerät der FK4/SL, Ergebnis wird als Vorschlag gezeigt und erst auf Knopfdruck geschrieben (Upsert in `dp_entries`, RLS: nur can_plan).
 - Export Excel (.xlsx, selbst geschrieben, fflate) und PDF (jsPDF) für Monat und Jahresübersicht. Web: Download; iOS/Android: Teilen-Dialog über expo-sharing. In der Artifact-Vorschau sind Downloads gesperrt.
 - Offline lesen: Im Live-Betrieb werden Dienstplan-Abfragen 7 Tage auf dem Gerät gehalten (TanStack Query Persist, AsyncStorage).
+
+### Nachtrag 2026-11-21 (2): Regelwerk v2, Protokolle, Mitteilungen
+
+- Migration `20261121150000_dienstplan_audit` (live): `dp_audit` mit Triggern auf `dp_entries` und `dp_staff`; Quelle plan/tausch/autodispo/person über `dp.source`. Lesen nur FK4/SL. `dp_set_entries` schreibt Autodisposition in einem Aufruf.
+- Migration `20261121160000_dienstplan_notify` (live): Mitteilungen in `notifications` bei Dienständerung (einzeln), Tauschvorschlag, Anfrage, „wartet auf Genehmigung“ (an FK4/SL), Ergebnis, veröffentlichter Autodisposition; `dp_alert_leads` für unbesetzte Pflichtdienste. Lokal getestet.
+- Regelwerk: mehrere Qualifikationen je Arbeitsplatz (alle/eine), Pflichtdienste, Zusatzdienste in Reihenfolge, Rest ohne Arbeitsplatz, Fahrgemeinschaften (gleiche Dienstzeiten), bevorzugte/ungeliebte Schichten je Person.
+- Test mit den echten Daten Februar 2027: alle Pflichtdienste besetzt, 20 Zusatzdienste offen (AK/M 15, PA/M 3, T1/M 2).
