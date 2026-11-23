@@ -46,3 +46,9 @@ Eine Planstelle kann mehrere Personen haben, z. B. „23a“ und „23b“ mit s
 | Mitarbeiter | eigenen Plan, Team, Tausch, Urlaubswünsche, Kommentare, Dokumente lesen |
 | FK4 / SL | planen, Autodisposition, Regelwerk, Einstellungen, Urlaub vormerken, Protokolle, Dokumente ablegen |
 | FK3 | gibt die Jahresurlaubsplanung in der Regel mündlich frei; FK4 / SL genehmigt danach in der App. Optional eigenes Login mit Freigabe in der App und Dokumente ablegen |
+
+## Web-App auf Vercel
+
+- Adresse: https://dienstplan-abteilung.vercel.app (Projekt `dienstplan-abteilung`).
+- Neu veröffentlichen: in `app/` bauen mit `EXPO_PUBLIC_INVITE_ONLY=1 npx expo export -p web --output-dir dist-vercel`, dann `python3 scripts/deploy-vercel.py dist-vercel dienstplan-abteilung`.
+- Supabase Auth: Site URL und Redirect-Liste stehen auf dieser Adresse, damit Bestätigungs- und Einladungslinks dort landen.
