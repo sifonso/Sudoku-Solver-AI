@@ -225,7 +225,7 @@ test.describe('Dienstplan', () => {
     await expect(page.getByRole('button', { name: /^Jansen, 1\./ })).toBeVisible();
   });
 
-  test('DP-14 Jahresurlaub: Wunsch, vormerken, freigeben (ohne FK3 durch FK4/SL)', async ({ page }) => {
+  test('DP-14 Jahresurlaub: Wunsch, vormerken, nach mündlichem FK3-OK durch FK4/SL genehmigen', async ({ page }) => {
     await loginDp(page, 'mira');
     await openTab(page, 'Mehr');
     await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
@@ -242,7 +242,7 @@ test.describe('Dienstplan', () => {
     await openTab(page, 'Mehr');
     await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
     await page.getByRole('button', { name: 'Vormerken' }).click();
-    await page.getByRole('button', { name: 'Freigeben' }).click();
+    await page.getByRole('button', { name: 'Genehmigen', exact: true }).click();
     await expect(page.getByText('Genehmigt', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /^Berger, KW 10: Genehmigt/ })).toBeVisible();
   });

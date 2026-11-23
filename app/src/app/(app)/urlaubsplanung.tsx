@@ -86,7 +86,9 @@ export default function VacationPlanScreen() {
         <IconButton icon={ChevronRight} label="Nächstes Jahr" tone="soft" onPress={() => setYear(year + 1)} />
       </>}>
       <Text variant="sm" color="textMuted">
-        Ablauf: Wunsch eintragen → FK4 / SL merkt vor → {settings.vacation.approvers.length ? 'FK3' : 'FK4 / SL (keine FK3 eingetragen)'} gibt frei → Urlaub steht als U im Dienstplan.
+        {settings.vacation.approvers.length
+          ? 'Ablauf: Wunsch eintragen → FK4 / SL merkt vor → FK3 gibt in der App frei → Urlaub steht als U im Dienstplan.'
+          : 'Ablauf: Wunsch eintragen → FK4 / SL merkt vor → nach dem (mündlichen) OK der FK3 genehmigt FK4 / SL → Urlaub steht als U im Dienstplan.'}
         {settings.vacation.wishDeadline ? ` Wünsche bitte bis ${settings.vacation.wishDeadline}${year} eintragen.` : ''}
       </Text>
       {err ? <Banner tone="danger" title={errorText(err)} /> : null}
@@ -142,16 +144,16 @@ export default function VacationPlanScreen() {
 
       {release_ ? (
         <>
-          <SectionHeader title={actor.isFk3 ? 'Zur Freigabe (FK3)' : 'Zur Freigabe'} count={toRelease.length} />
+          <SectionHeader title={actor.isFk3 ? 'Zur Freigabe (FK3)' : 'Genehmigen (nach OK der FK3)'} count={toRelease.length} />
           {toRelease.length > 1 ? (
-            <Button label={`Alle ${toRelease.length} freigeben`} icon={Check} variant="secondary" loading={release.isPending}
+            <Button label={actor.isFk3 ? `Alle ${toRelease.length} freigeben` : `Alle ${toRelease.length} genehmigen`} icon={Check} variant="secondary" loading={release.isPending}
               onPress={async () => { for (const v of toRelease) await release.mutateAsync({ id: v.id, ok: true, reason: '' }); }} />
           ) : null}
-          {toRelease.length === 0 ? <Text variant="sm" color="textMuted">Nichts zur Freigabe.</Text> : toRelease.map((v) => (
+          {toRelease.length === 0 ? <Text variant="sm" color="textMuted">Nichts vorgemerkt.</Text> : toRelease.map((v) => (
             <Card key={v.id} style={styles.card}>
               <VacRow v={v} days={days(v)} name={byId.get(v.staffId)?.short ?? ''} />
               <View style={styles.row}>
-                <Button label="Freigeben" icon={Check} size="sm" loading={release.isPending} onPress={() => release.mutate({ id: v.id, ok: true, reason: '' })} />
+                <Button label={actor.isFk3 ? 'Freigeben' : 'Genehmigen'} icon={Check} size="sm" loading={release.isPending} onPress={() => release.mutate({ id: v.id, ok: true, reason: '' })} />
                 <Button label="Ablehnen" icon={X} size="sm" variant="secondary" onPress={() => release.mutate({ id: v.id, ok: false, reason: '' })} />
               </View>
             </Card>
@@ -218,7 +220,7 @@ function VacRow({ v, days, name, trailing }: { v: VacationReq; days: number; nam
       <View style={{ flex: 1, minWidth: 180 }}>
         <Text variant="sm" style={styles.bold}>{name} · {short(v.from)}–{toDe(v.to)} · {days} Tage · Prio {v.priority}</Text>
         <Text variant="xs" color="textMuted">
-          {[v.note && `„${v.note}“`, v.fk4Name && `vorgemerkt von ${v.fk4Name}`, v.fk3Name && `${v.status === 'genehmigt' ? 'freigegeben' : 'entschieden'} von ${v.fk3Name}`, v.reason && `Grund: ${v.reason}`].filter(Boolean).join(' · ')}
+          {[v.note && `„${v.note}“`, v.fk4Name && `vorgemerkt von ${v.fk4Name}`, v.fk3Name && `${v.status === 'genehmigt' ? 'genehmigt' : 'entschieden'} von ${v.fk3Name}`, v.reason && `Grund: ${v.reason}`].filter(Boolean).join(' · ')}
         </Text>
       </View>
       <Badge label={st.label} tone={st.tone} />

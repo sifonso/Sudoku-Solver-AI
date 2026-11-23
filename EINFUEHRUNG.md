@@ -45,4 +45,4 @@ Eine Planstelle kann mehrere Personen haben, z. B. „23a“ und „23b“ mit s
 | --- | --- |
 | Mitarbeiter | eigenen Plan, Team, Tausch, Urlaubswünsche, Kommentare, Dokumente lesen |
 | FK4 / SL | planen, Autodisposition, Regelwerk, Einstellungen, Urlaub vormerken, Protokolle, Dokumente ablegen |
-| FK3 | Login als Mitarbeiter, in den Einstellungen als Freigabe eingetragen: Jahresurlaub freigeben, Dokumente ablegen |
+| FK3 | gibt die Jahresurlaubsplanung in der Regel mündlich frei; FK4 / SL genehmigt danach in der App. Optional eigenes Login mit Freigabe in der App und Dokumente ablegen |

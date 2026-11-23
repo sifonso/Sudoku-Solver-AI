@@ -49,8 +49,8 @@ export default function DpSettingsScreen() {
 
       <SectionHeader title="Urlaubsplanung" />
       <Card style={styles.card}>
-        <Text variant="xs" color="textMuted">FK3 geben die Jahresurlaubsplanung frei. Ohne FK3 gibt FK4 / SL selbst frei. FK3 braucht ein Login (als Mitarbeiter einladen).</Text>
-        <Text variant="label" color="textMuted">FK3 (Freigabe)</Text>
+        <Text variant="xs" color="textMuted">Normalfall: Die FK3 gibt die Urlaubsplanung mündlich frei, danach genehmigt FK4 / SL in der App. Hier nur jemanden eintragen, wenn die FK3 selbst in der App freigeben soll (braucht ein Login als Mitarbeiter).</Text>
+        <Text variant="label" color="textMuted">FK3 mit eigener Freigabe in der App (optional)</Text>
         <View style={styles.grid}>
           {(members.data ?? []).filter((m) => m.status === 'active' || m.status === 'invited').map((m) => {
             const on = s.vacation.approvers.includes(m.id);
