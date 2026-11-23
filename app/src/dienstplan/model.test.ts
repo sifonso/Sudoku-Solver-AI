@@ -153,3 +153,10 @@ test('Autodisposition: Zusatzdienste in Reihenfolge, Rest ohne Arbeitsplatz, Fah
   assert.equal(code('a'), 'T1/F');
   assert.equal(code('b'), 'T2/F'); // gleiche Zeit wie Partner a
 });
+
+test('Urlaubstage zählen nur Diensttage laut Turnus', async () => {
+  const { vacationWorkDays } = await import('./model.ts');
+  // rhythm: Mo-Mi F, Do-Fr S/N, Sa-So frei → Woche 04.–10.01.2027 = 5 Diensttage
+  assert.equal(vacationWorkDays(person('a'), '2027-01-04', '2027-01-10', S), 5);
+  assert.equal(vacationWorkDays(person('a'), '2027-01-09', '2027-01-10', S), 0);
+});

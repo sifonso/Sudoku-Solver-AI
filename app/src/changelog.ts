@@ -3,6 +3,15 @@ export interface Release { version: string; date: string; items: string[] }
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.8', date: '2026-11-23', items: [
+      'Jahresurlaubsplanung: Wünsche mit Priorität, FK4 / SL merkt vor, FK3 gibt frei, genehmigter Urlaub steht als U im Dienstplan',
+      'Übersicht nach Kalenderwochen mit Warnung, wenn zu viele gleichzeitig im Urlaub sind; Urlaubsanspruch je Person',
+      'FK3 als Freigabe-Rolle in den Einstellungen',
+      'Bereich „Regeln und Betriebsvereinbarungen“ mit Datei-Upload (bis 20 MB) für FK4 / SL und FK3',
+      'Geschlossener Betrieb: Registrierung nur noch mit Einladungscode möglich',
+    ],
+  },
+  {
     version: '0.7', date: '2026-11-21', items: [
       'Autodisposition nach Regelwerk: Pflichtdienste zuerst, dann Zusatzdienste in fester Reihenfolge, Rest ohne Arbeitsplatz',
       'Vorschlag der Autodisposition als Monatsplan mit Nachbearbeitung; erst „Veröffentlichen“ schreibt in den Plan',

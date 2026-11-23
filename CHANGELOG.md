@@ -2,6 +2,14 @@
 
 Änderungen an der App, neueste zuerst. Dieselben Einträge zeigt die App unter Mehr → Änderungen an der App (Quelle: app/src/changelog.ts).
 
+## 0.8 · 23.11.2026
+
+- Jahresurlaubsplanung: Wünsche mit Priorität, FK4 / SL merkt vor, FK3 gibt frei, genehmigter Urlaub steht als U im Dienstplan
+- Übersicht nach Kalenderwochen mit Warnung, wenn zu viele gleichzeitig im Urlaub sind; Urlaubsanspruch je Person
+- FK3 als Freigabe-Rolle in den Einstellungen
+- Bereich „Regeln und Betriebsvereinbarungen“ mit Datei-Upload (bis 20 MB) für FK4 / SL und FK3
+- Geschlossener Betrieb: Registrierung nur noch mit Einladungscode möglich
+
 ## 0.7 · 21.11.2026
 
 - Autodisposition nach Regelwerk: Pflichtdienste zuerst, dann Zusatzdienste in fester Reihenfolge, Rest ohne Arbeitsplatz

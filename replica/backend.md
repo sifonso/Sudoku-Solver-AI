@@ -154,3 +154,9 @@ Migration `20261120180000_dienstplan_ring_comments` (live eingespielt, lokal get
 - Migration `20261121160000_dienstplan_notify` (live): Mitteilungen in `notifications` bei Dienständerung (einzeln), Tauschvorschlag, Anfrage, „wartet auf Genehmigung“ (an FK4/SL), Ergebnis, veröffentlichter Autodisposition; `dp_alert_leads` für unbesetzte Pflichtdienste. Lokal getestet.
 - Regelwerk: mehrere Qualifikationen je Arbeitsplatz (alle/eine), Pflichtdienste, Zusatzdienste in Reihenfolge, Rest ohne Arbeitsplatz, Fahrgemeinschaften (gleiche Dienstzeiten), bevorzugte/ungeliebte Schichten je Person.
 - Test mit den echten Daten Februar 2027: alle Pflichtdienste besetzt, 20 Zusatzdienste offen (AK/M 15, PA/M 3, T1/M 2).
+
+### Nachtrag 2026-11-23: Urlaubsplanung, Dokumente, geschlossener Betrieb
+
+- Migration `20261123090000_urlaub_dokumente` (live, lokal getestet): `app_config.allow_new_tenants` (Sperre für neue Betriebe), `dp_vacation` mit `dp_vac_wish/review/release/delete`, FK3 über `dp_settings.data.vacation.approvers` (`dp_is_fk3`, `dp_can_release`), genehmigter Urlaub als U an Diensttagen (Quelle „urlaub“ im Protokoll), Mitteilungen an FK4/SL, FK3 und Betroffene. `dp_docs` für Regeln und Betriebsvereinbarungen.
+- Migration `20261123090100_dokumente_storage` (live): privater Bucket `dp-docs` (20 MB je Datei), Pfad `<tenant_id>/…`, Lesen alle im Betrieb, Schreiben/Löschen FK4/SL und FK3.
+- Einführung im geschlossenen Umfeld: `EINFUEHRUNG.md`.

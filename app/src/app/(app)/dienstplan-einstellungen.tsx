@@ -2,6 +2,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useActive } from '../../data/session';
+import { useMembers } from '../../data/hooks';
 import { canLead, useDp, useSaveSettings } from '../../dienstplan/hooks';
 import { DEFAULT_SETTINGS, type DpSettings, type ShiftGroup } from '../../dienstplan/model';
 import { CodeBadge } from '../../dienstplan/ui';
@@ -23,6 +24,7 @@ export default function DpSettingsScreen() {
   const { member } = useActive();
   const lead = canLead(member.role);
   const dp = useDp();
+  const members = useMembers();
   const save = useSaveSettings();
   const { c } = useTheme();
   const [s, setS] = useState<DpSettings | null>(null);
@@ -43,6 +45,32 @@ export default function DpSettingsScreen() {
         <Text variant="xs" color="textMuted">
           {s.swapApproval ? 'Einigen sich zwei Personen, wartet der Tausch auf deine Freigabe.' : 'Einigen sich zwei Personen, wird sofort getauscht. Du siehst es im Plan als DT.'}
         </Text>
+      </Card>
+
+      <SectionHeader title="Urlaubsplanung" />
+      <Card style={styles.card}>
+        <Text variant="xs" color="textMuted">FK3 geben die Jahresurlaubsplanung frei. Ohne FK3 gibt FK4 / SL selbst frei. FK3 braucht ein Login (als Mitarbeiter einladen).</Text>
+        <Text variant="label" color="textMuted">FK3 (Freigabe)</Text>
+        <View style={styles.grid}>
+          {(members.data ?? []).filter((m) => m.status === 'active' || m.status === 'invited').map((m) => {
+            const on = s.vacation.approvers.includes(m.id);
+            return (
+              <Pressable key={m.id} accessibilityRole="checkbox" aria-checked={on} accessibilityLabel={`FK3: ${m.displayName}`}
+                onPress={() => set({ vacation: { ...s.vacation, approvers: on ? s.vacation.approvers.filter((x) => x !== m.id) : [...s.vacation.approvers, m.id] } })}
+                style={[styles.g, { width: undefined, paddingHorizontal: 12, borderColor: c.border, backgroundColor: on ? c.accent : c.surface }]}>
+                <Text variant="sm" color={on ? 'onAccent' : 'text'} style={styles.bold}>{m.displayName}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.row}>
+          <View style={styles.f}><TextField label="Höchstens gleichzeitig im Urlaub" value={String(s.vacation.maxParallel)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, maxParallel: n } }); }} /></View>
+          <View style={styles.f}><TextField label="Urlaubsanspruch (Diensttage), Standard" value={String(s.vacation.defaultDays)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, defaultDays: n } }); }} /></View>
+          <View style={styles.f}><TextField label="Wünsche bis (TT.MM., optional)" value={s.vacation.wishDeadline} placeholder="31.01."
+            onChangeText={(v) => set({ vacation: { ...s.vacation, wishDeadline: v } })} /></View>
+        </View>
       </Card>
 
       <SectionHeader title="Grundrhythmus" />

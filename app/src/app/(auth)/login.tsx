@@ -63,7 +63,7 @@ export default function LoginScreen() {
       <View style={styles.row}>
         <Text variant="sm" color="textMuted">Neu hier?</Text>
         <Link href="/registrieren" accessibilityRole="link">
-          <Text variant="sm" style={styles.link}>Firma registrieren</Text>
+          <Text variant="sm" style={styles.link}>{process.env.EXPO_PUBLIC_INVITE_ONLY === '1' ? 'Mit Einladungscode registrieren' : 'Firma registrieren'}</Text>
         </Link>
       </View>
 

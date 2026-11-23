@@ -14,6 +14,8 @@ import { Avatar, Banner, Button, Card, ListRow, SectionHeader, Text } from '../.
 
 type Item = { label: string; href: Href; id: string; roles: Role[] | 'all' };
 const ITEMS: Item[] = [
+  { id: 'UP', label: 'Urlaubsplanung (Jahr)', href: '/urlaubsplanung', roles: 'all' },
+  { id: 'DOC', label: 'Regeln und Betriebsvereinbarungen', href: '/dokumente', roles: 'all' },
   { id: 'DP1', label: 'Grundrhythmus (16 Wochen)', href: '/rhythmus', roles: 'all' },
   { id: 'DP3', label: 'Autodisposition', href: '/autodispo', roles: ['chef', 'planer'] },
   { id: 'DP4', label: 'Regelwerk', href: '/regelwerk', roles: ['chef', 'planer'] },

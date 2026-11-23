@@ -95,6 +95,8 @@ export default function PersonScreen() {
         </View>
         <View style={styles.row2}>
           <View style={styles.f}><TextField label="WhatsApp" value={s.whatsapp} editable={lead} onChangeText={(v) => set({ whatsapp: v })} hint="ok / nok" /></View>
+ {lead ? <View style={styles.f}><TextField label="Urlaubsanspruch (Diensttage)" value={s.vacationDays == null ? '' : String(s.vacationDays)} keyboardType="number-pad"
+            placeholder="Standard" onChangeText={(v) => set({ vacationDays: v.trim() === '' ? null : Number.isInteger(Number(v)) ? Number(v) : s.vacationDays })} /></View> : null}
           {lead ? <View style={styles.f}><TextField label="Personalnummer" value={s.persNr} onChangeText={(v) => set({ persNr: v })} hint="nur für FK4 / SL sichtbar" /></View> : null}
         </View>
       </Card>

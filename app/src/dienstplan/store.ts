@@ -2,8 +2,8 @@
 // (vom Veröffentlichungsskript eingesetzt, nie im Repository) oder aus sample.ts.
 import { ApiError } from '../data/api';
 import {
-  DEFAULT_SETTINGS, byIdOf, cellFor, indexEntries, isWork,
-  type AuditEntry, type Carpool, type DpComment, type DpSeed, type DpSettings, type Entry, type Staff, type SwapLeg, type SwapOffer,
+  DEFAULT_SETTINGS, addDays as addDaysIso, byIdOf, cellFor, indexEntries, isWork,
+  type AuditEntry, type Carpool, type DocItem, type DpComment, type VacationReq, type DpSeed, type DpSettings, type Entry, type Staff, type SwapLeg, type SwapOffer,
 } from './model.ts';
 import { sampleSeed } from './sample';
 import { api as fakeApi } from '../data/fake';
@@ -12,7 +12,7 @@ import { SwapError, legsOf, planRing } from './swap.ts';
 export interface DpState { settings: DpSettings; staff: Staff[]; carpools: Carpool[] }
 
 /** Wer gerade handelt. staffId = eigene Person im Plan (falls verknüpft). */
-export interface Actor { memberId: string; name: string; isLead: boolean; staffId: string | null }
+export interface Actor { memberId: string; name: string; isLead: boolean; staffId: string | null; isFk3?: boolean }
 
 export interface DpApi {
   load(tenantId: string): Promise<DpState>;
@@ -30,6 +30,20 @@ export interface DpApi {
   audit(tenantId: string, limit: number): Promise<AuditEntry[]>;
   /** Mitteilung an alle FK4/SL (z. B. unbesetzte Pflichtdienste). */
   alertLeads(tenantId: string, title: string, body: string): Promise<void>;
+
+  vacations(tenantId: string, year: number): Promise<VacationReq[]>;
+  vacWish(tenantId: string, input: { from: string; to: string; priority: 1 | 2; note: string; staffId?: string }, actor: Actor): Promise<void>;
+  vacDelete(tenantId: string, id: string, actor: Actor): Promise<void>;
+  /** FK4/SL: vormerken oder ablehnen */
+  vacReview(tenantId: string, id: string, ok: boolean, reason: string, actor: Actor): Promise<void>;
+  /** FK3 (ohne FK3: FK4/SL): freigeben, dann U an Diensttagen im Plan */
+  vacRelease(tenantId: string, id: string, ok: boolean, reason: string, actor: Actor): Promise<void>;
+
+  docs(tenantId: string): Promise<DocItem[]>;
+  addDoc(tenantId: string, input: { title: string; category: string; note: string; validFrom: string | null; file: { name: string; mime: string; size: number; base64: string } | null }, actor: Actor): Promise<void>;
+  deleteDoc(tenantId: string, id: string, actor: Actor): Promise<void>;
+  /** Adresse zum Öffnen (Demo: data:-URL, Live: befristeter Link) */
+  docUrl(tenantId: string, doc: DocItem): Promise<string>;
 
   swaps(tenantId: string): Promise<SwapOffer[]>;
   /** Dienst in der Börse anbieten. FK4/SL darf für jede Person anbieten. */
@@ -53,6 +67,9 @@ export interface DpApi {
   deleteComment(tenantId: string, id: string, actor: Actor): Promise<void>;
 }
 
+/** Darf freigeben: FK3, oder FK4/SL wenn keine FK3 eingetragen sind. */
+export const canRelease = (actor: Pick<Actor, 'isLead' | 'isFk3'>, s: DpSettings) => !!actor.isFk3 || (actor.isLead && s.vacation.approvers.length === 0);
+
 export const canEditComment = (c: DpComment, actor: Pick<Actor, 'memberId' | 'isLead'>) =>
   c.authorMemberId === actor.memberId || (c.authorIsLead && actor.isLead);
 
@@ -67,6 +84,7 @@ export function mergeSettings(partial?: Partial<DpSettings>): DpSettings {
     minStaffing: { ...DEFAULT_SETTINGS.minStaffing, ...(partial?.minStaffing ?? {}) },
     presets: { ...DEFAULT_SETTINGS.presets, ...(partial?.presets ?? {}) },
     dispo: mergeDispo(partial?.dispo),
+    vacation: { ...DEFAULT_SETTINGS.vacation, ...(partial?.vacation ?? {}) },
   };
 }
 
@@ -103,6 +121,8 @@ function fakeStore(): DpApi {
     swaps: [] as SwapOffer[],
     comments: [] as DpComment[],
     audit: [] as AuditEntry[],
+    vacations: [] as VacationReq[],
+    docs: [] as DocItem[],
   };
   const log = (a: Partial<AuditEntry> & { actorName?: string }) => {
     db.audit.unshift({ id: uid('log'), at: new Date().toISOString(), actorName: a.actorName ?? 'System', staffId: a.staffId ?? null, date: a.date ?? null,
@@ -179,6 +199,67 @@ function fakeStore(): DpApi {
       }
     },
     async alertLeads(t, title, body) { await wait(); notifyLeads(t, 'dp_required_gap', title, body); },
+
+    async vacations(_t, year) { await wait(); return clone(db.vacations.filter((v) => v.year === year)); },
+    async vacWish(t, { from, to, priority, note, staffId }, actor) {
+      await wait();
+      const who = staffId ?? actor.staffId;
+      if (!who || (who !== actor.staffId && !actor.isLead)) throw new ApiError('forbidden');
+      if (to < from) throw new ApiError('invalid_entry', 'Bis liegt vor Von.');
+      db.vacations.push({ id: uid('v'), staffId: who, year: Number(from.slice(0, 4)), from, to, priority, note, status: 'wunsch', reason: '',
+        fk4Name: null, fk4At: null, fk3Name: null, fk3At: null, createdAt: new Date().toISOString() });
+      notifyLeads(t, 'vac_wish', 'Neuer Urlaubswunsch', `${db.staff.find((x) => x.id === who)?.short ?? ''}: ${dm(from)}–${dm(to)}`);
+    },
+    async vacDelete(_t, id, actor) {
+      await wait();
+      const v = db.vacations.find((x) => x.id === id);
+      if (!v) throw new ApiError('not_found');
+      if (v.status === 'genehmigt') {
+        if (!actor.isLead && !actor.isFk3) throw new ApiError('forbidden');
+        for (const e of db.entries.filter((x) => x.staffId === v.staffId && x.date >= v.from && x.date <= v.to && x.code === 'U')) put({ ...e, code: '', flex: false }, actor.name, 'urlaub');
+      } else if (v.staffId !== actor.staffId && !actor.isLead) throw new ApiError('forbidden');
+      db.vacations = db.vacations.filter((x) => x.id !== id);
+    },
+    async vacReview(t, id, ok, reason, actor) {
+      await wait();
+      if (!actor.isLead) throw new ApiError('forbidden');
+      const v = db.vacations.find((x) => x.id === id);
+      if (!v) throw new ApiError('not_found');
+      if (v.status !== 'wunsch' && v.status !== 'vorgemerkt') throw new ApiError('already_decided');
+      Object.assign(v, { status: ok ? 'vorgemerkt' : 'abgelehnt', reason, fk4Name: actor.name, fk4At: new Date().toISOString() });
+      notifyStaff(t, v.staffId, 'vac_review', ok ? 'Urlaubswunsch vorgemerkt' : 'Urlaubswunsch abgelehnt', `${dm(v.from)}–${dm(v.to)}`);
+      if (ok) for (const m of db.settings.vacation.approvers) note(t, m, 'vac_release', 'Urlaubsplanung zur Freigabe', 'Ein vorgemerkter Urlaub wartet auf dein OK.');
+    },
+    async vacRelease(t, id, ok, reason, actor) {
+      await wait();
+      if (!canRelease(actor, db.settings)) throw new ApiError('forbidden');
+      const v = db.vacations.find((x) => x.id === id);
+      if (!v) throw new ApiError('not_found');
+      if (v.status !== 'vorgemerkt') throw new ApiError('already_decided');
+      Object.assign(v, { status: ok ? 'genehmigt' : 'abgelehnt', reason, fk3Name: actor.name, fk3At: new Date().toISOString() });
+      if (ok) {
+        const st = db.staff.find((x) => x.id === v.staffId)!;
+        const byId = byIdOf(db.staff);
+        for (let d = v.from; d <= v.to; d = addDaysIso(d, 1)) {
+          if (isWork(cellFor(st, d, indexEntries(db.entries), db.settings, 'fein', byId).code, db.settings)) put({ staffId: st.id, date: d, code: 'U', flex: false }, actor.name, 'urlaub');
+        }
+      }
+      notifyStaff(t, v.staffId, 'vac_release', ok ? 'Urlaub genehmigt' : 'Urlaub abgelehnt', `${dm(v.from)}–${dm(v.to)}`);
+    },
+
+    async docs() { await wait(); return clone(db.docs); },
+    async addDoc(_t, { title, category, note, validFrom, file }, actor) {
+      await wait();
+      if (!actor.isLead && !actor.isFk3) throw new ApiError('forbidden');
+      db.docs.unshift({ id: uid('d'), title, category, note, validFrom, fileName: file?.name ?? null, mime: file?.mime ?? null, size: file?.size ?? null,
+        path: file ? `data:${file.mime};base64,${file.base64}` : null, uploadedName: actor.name, uploadedAt: new Date().toISOString() });
+    },
+    async deleteDoc(_t, id, actor) {
+      await wait();
+      if (!actor.isLead && !actor.isFk3) throw new ApiError('forbidden');
+      db.docs = db.docs.filter((x) => x.id !== id);
+    },
+    async docUrl(_t, doc) { return doc.path ?? ''; },
     async saveSettings(_t, s) { await wait(); db.settings = clone(s); },
     async saveStaff(_t, s, actor) {
       await wait();

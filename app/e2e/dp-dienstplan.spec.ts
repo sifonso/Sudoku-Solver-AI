@@ -224,4 +224,45 @@ test.describe('Dienstplan', () => {
     await openTab(page, 'Monat');
     await expect(page.getByRole('button', { name: /^Jansen, 1\./ })).toBeVisible();
   });
+
+  test('DP-14 Jahresurlaub: Wunsch, vormerken, freigeben (ohne FK3 durch FK4/SL)', async ({ page }) => {
+    await loginDp(page, 'mira');
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
+    await page.getByLabel('Von').fill('08.03.2027');
+    await page.getByLabel('Bis').fill('19.03.2027');
+    await expect(page.getByText(/\d+ Diensttage laut Turnus/)).toBeVisible();
+    await page.getByLabel('Notiz (optional)').fill('Skiurlaub');
+    await page.getByRole('button', { name: 'Wunsch eintragen' }).click();
+    await expect(page.getByText('Wunsch', { exact: true }).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.chef }).click();
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
+    await page.getByRole('button', { name: 'Vormerken' }).click();
+    await page.getByRole('button', { name: 'Freigeben' }).click();
+    await expect(page.getByText('Genehmigt', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Berger, KW 10: Genehmigt/ })).toBeVisible();
+  });
+
+  test('DP-15 Dokumente: FK4/SL legt Regel ab, Mitarbeiter:in liest', async ({ page }) => {
+    await loginDp(page, 'chef');
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Regeln und Betriebsvereinbarungen/ }).click();
+    await page.getByRole('button', { name: 'Neu' }).click();
+    await page.getByLabel('Titel').fill('Tauschregeln 2027');
+    await page.getByLabel('Text oder Zusammenfassung (optional)').fill('Tausch nur bis 48 Stunden vor Dienstbeginn.');
+    await page.getByRole('button', { name: 'Speichern' }).click();
+    await expect(page.getByText('Tauschregeln 2027')).toBeVisible();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.mira }).click();
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Regeln und Betriebsvereinbarungen/ }).click();
+    await expect(page.getByText('Tausch nur bis 48 Stunden vor Dienstbeginn.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Neu' })).toHaveCount(0);
+  });
 });

@@ -1,7 +1,7 @@
 // Dienstplan gegen Supabase (Tabellen dp_* und RPCs aus Migration 20261120120000_dienstplan).
 import { ApiError } from '../data/api';
 import { q, sharedClient } from '../data/supabase';
-import type { AuditEntry, DpComment, DpSettings, Staff, SwapOffer } from './model';
+import type { AuditEntry, DocItem, DpComment, DpSettings, Staff, SwapOffer, VacationReq } from './model';
 import { mergeSettings, type DpApi } from './store';
 
 type Row = Record<string, any>;
@@ -68,6 +68,48 @@ export function dpSupabase(): DpApi {
     async saveCarpools(tenantId, list) {
       await q(client().from('dp_carpools').delete().eq('tenant_id', tenantId));
       if (list.length) await q(client().from('dp_carpools').insert(list.map((c) => ({ tenant_id: tenantId, name: c.name, members: c.members }))));
+    },
+    async vacations(tenantId, year) {
+      const rows: Row[] = await q(client().from('dp_vacation').select('*').eq('tenant_id', tenantId).eq('year', year).order('date_from'));
+      return rows.map((r): VacationReq => ({ id: r.id, staffId: r.staff_id, year: r.year, from: r.date_from, to: r.date_to, priority: r.priority,
+        note: r.note, status: r.status, reason: r.reason, fk4Name: r.fk4_name, fk4At: r.fk4_at, fk3Name: r.fk3_name, fk3At: r.fk3_at, createdAt: r.created_at }));
+    },
+    async vacWish(tenantId, { from, to, priority, note, staffId }, actor) {
+      await q(client().rpc('dp_vac_wish', { p_tenant: tenantId, p_from: from, p_to: to, p_priority: priority, p_note: note,
+        p_staff: staffId && staffId !== actor.staffId ? staffId : null }));
+    },
+    async vacDelete(_t, id) { await q(client().rpc('dp_vac_delete', { p_id: id })); },
+    async vacReview(_t, id, ok, reason) { await q(client().rpc('dp_vac_review', { p_id: id, p_ok: ok, p_reason: reason })); },
+    async vacRelease(_t, id, ok, reason) { await q(client().rpc('dp_vac_release', { p_id: id, p_ok: ok, p_reason: reason })); },
+
+    async docs(tenantId) {
+      const rows: Row[] = await q(client().from('dp_docs').select('*').eq('tenant_id', tenantId).order('uploaded_at', { ascending: false }));
+      return rows.map((r): DocItem => ({ id: r.id, title: r.title, category: r.category, note: r.note, fileName: r.file_name, mime: r.mime,
+        size: r.size, path: r.file_path, validFrom: r.valid_from, uploadedName: r.uploaded_name, uploadedAt: r.uploaded_at }));
+    },
+    async addDoc(tenantId, { title, category, note, validFrom, file }, actor) {
+      let path: string | null = null;
+      if (file) {
+        const bin = globalThis.atob(file.base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        path = `${tenantId}/${Date.now().toString(36)}-${file.name.replace(/[^A-Za-z0-9._-]+/g, '_')}`;
+        const { error } = await client().storage.from('dp-docs').upload(path, bytes, { contentType: file.mime, upsert: false });
+        if (error) throw new ApiError('network', error.message);
+      }
+      await q(client().from('dp_docs').insert({ tenant_id: tenantId, title, category, note, valid_from: validFrom, file_path: path,
+        file_name: file?.name ?? null, mime: file?.mime ?? null, size: file?.size ?? null, uploaded_by: actor.memberId, uploaded_name: actor.name }));
+    },
+    async deleteDoc(tenantId, id) {
+      const rows: Row[] = await q(client().from('dp_docs').delete().eq('tenant_id', tenantId).eq('id', id).select('file_path'));
+      const path = rows?.[0]?.file_path;
+      if (path) await client().storage.from('dp-docs').remove([path]);
+    },
+    async docUrl(_t, doc) {
+      if (!doc.path) return '';
+      const { data, error } = await client().storage.from('dp-docs').createSignedUrl(doc.path, 600);
+      if (error) throw new ApiError('network', error.message);
+      return data.signedUrl;
     },
     async alertLeads(tenantId, title, body) {
       await q(client().rpc('dp_alert_leads', { p_tenant: tenantId, p_title: title, p_body: body }));

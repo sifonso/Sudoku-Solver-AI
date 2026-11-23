@@ -56,7 +56,9 @@ export function useActor(): Actor {
   const as = useDemoAs();
   // Demo: wer als Person aus dem Plan handelt, hat deren Rechte (keine FK4/SL-Rechte)
   const isLead = canLead(member.role) && !(backend === 'demo' && as);
-  return { memberId: member.id, name: member.displayName, isLead, staffId: me?.id ?? null };
+  const { data } = useDp();
+  const isFk3 = !!data?.settings.vacation.approvers.includes(member.id) && !(backend === 'demo' && as);
+  return { memberId: member.id, name: member.displayName, isLead, staffId: me?.id ?? null, isFk3 };
 }
 
 export function useComments(from: string, to: string) {
@@ -157,5 +159,28 @@ export function useSaveCarpools() {
   return useMutation({
     mutationFn: (list: Carpool[]) => dp.saveCarpools(tenant.id, list),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dp', tenant.id] }),
+  });
+}
+
+export function useVacations(year: number) {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['dp-vac', tenant.id, year], queryFn: () => dp.vacations(tenant.id, year) });
+}
+
+export function useDocs() {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['dp-docs', tenant.id], queryFn: () => dp.docs(tenant.id) });
+}
+
+/** Aktion mit Actor; lädt Urlaub, Dokumente, Plan und Mitteilungen neu. */
+export function useDpAction<T>(fn: (tenantId: string, input: T, actor: Actor) => Promise<void>) {
+  const { tenant } = useActive();
+  const actor = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: T) => fn(tenant.id, input, actor),
+    onSuccess: () => {
+      for (const k of ['dp-vac', 'dp-docs', 'dp-entries', 'dp-audit', 'notifications']) qc.invalidateQueries({ queryKey: [k] });
+    },
   });
 }

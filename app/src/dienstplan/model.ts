@@ -38,6 +38,53 @@ export interface DpSettings {
   /** Feinschichten (F1, M2, S1 …) im Änderungsfenster anbieten. Aus: nur F, M, S, N. */
   detailShifts: boolean;
   dispo: DispoRules;
+  vacation: VacationSettings;
+}
+
+/** Jahresurlaubsplanung. FK3 (approvers) gibt frei; ohne FK3 gibt FK4/SL frei. */
+export interface VacationSettings {
+  /** Login-IDs der FK3, die die Urlaubsplanung freigeben */
+  approvers: string[];
+  /** höchstens so viele Personen gleichzeitig im Urlaub (Warnung) */
+  maxParallel: number;
+  /** Urlaubsanspruch in Diensttagen, wenn bei der Person nichts eingetragen ist */
+  defaultDays: number;
+  /** Wünsche fürs nächste Jahr bis zu diesem Datum (TT.MM.), leer = jederzeit */
+  wishDeadline: string;
+}
+
+export type VacStatus = 'wunsch' | 'vorgemerkt' | 'abgelehnt' | 'genehmigt';
+export interface VacationReq {
+  id: string;
+  staffId: string;
+  year: number;
+  from: string;
+  to: string;
+  priority: 1 | 2;
+  note: string;
+  status: VacStatus;
+  reason: string;
+  fk4Name: string | null;
+  fk4At: string | null;
+  fk3Name: string | null;
+  fk3At: string | null;
+  createdAt: string;
+}
+
+export const DOC_CATEGORIES = ['Dienstplanregeln', 'Betriebsvereinbarung', 'Sonstiges'] as const;
+export interface DocItem {
+  id: string;
+  title: string;
+  category: string;
+  note: string;
+  fileName: string | null;
+  mime: string | null;
+  size: number | null;
+  /** Speicherort (Storage-Pfad bzw. data:-URL in der Demo) */
+  path: string | null;
+  validFrom: string | null;
+  uploadedName: string;
+  uploadedAt: string;
 }
 
 /** Regelwerk der Autodisposition (betriebsweit). */
@@ -125,6 +172,8 @@ export interface Staff {
   rules?: PersonRules;
   /** aus dem Team entfernt (Historie bleibt) */
   archived?: boolean;
+  /** Urlaubsanspruch in Diensttagen (leer = Standard aus den Einstellungen) */
+  vacationDays?: number | null;
 }
 
 export interface Entry { staffId: string; date: string; code: string; flex: boolean }
@@ -242,6 +291,7 @@ export const DEFAULT_SETTINGS: DpSettings = {
     nakedRest: true,
     carpools: true,
   },
+  vacation: { approvers: [], maxParallel: 4, defaultDays: 30, wishDeadline: '' },
 };
 
 export const GROUP_NAMES: Record<ShiftGroup, string> = { F: 'Frühdienst', M: 'Mitteldienst', S: 'Spätdienst', N: 'Nachtdienst' };
@@ -468,3 +518,15 @@ export function yearStats(staff: Staff, year: number, entries: Map<string, Entry
 }
 
 export const displayName = (st: Staff) => (st.firstName ? `${st.firstName} ${st.lastName}` : st.lastName || st.short);
+
+// ---------- Urlaub ----------
+/** Diensttage einer Person im Zeitraum laut Turnus (ohne Feinplan), d. h. Tage, die Urlaub kosten. */
+export function vacationWorkDays(st: Staff, from: string, to: string, s: DpSettings, byId?: Map<string, Staff>): number {
+  let n = 0;
+  const empty = new Map<string, Entry>();
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    const c = cellFor(st, d, empty, s, 'rhythmus', byId);
+    if (isWork(c.base, s)) n++;
+  }
+  return n;
+}
