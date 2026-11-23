@@ -47,11 +47,25 @@ export interface VacationSettings {
   approvers: string[];
   /** höchstens so viele Personen gleichzeitig im Urlaub (Warnung) */
   maxParallel: number;
-  /** Urlaubsanspruch in Diensttagen, wenn bei der Person nichts eingetragen ist */
-  defaultDays: number;
-  /** Wünsche fürs nächste Jahr bis zu diesem Datum (TT.MM.), leer = jederzeit */
+  /** Grundanspruch Vollzeit in Tagen; Teilzeit anteilig */
+  baseDays: number;
+  /** Zusatzurlaub für alle, die laut Turnus F, S und N arbeiten (tariflich, änderbar) */
+  shiftBonusDays: number;
+  /** Planungsjahr, für das Wünsche gesammelt werden, und Abgabefrist (ISO-Datum), von FK4/SL gesetzt */
+  wishYear: number | null;
   wishDeadline: string;
+  /** Flextage je Person und Jahr: selbst gewählt bzw. vom Arbeitgeber vergeben */
+  flexOwn: number;
+  flexEmployer: number;
+  /** Jahre, in denen Mitarbeitende ihre Flextage wählen dürfen (nach Freigabe der Urlaubsplanung) */
+  flexOpenYears: number[];
+  /** Bedarfsfarben: Schichtstärke bis redAt rot, bis yellowAt gelb */
+  redAt: number;
+  yellowAt: number;
 }
+
+/** Flextag: zusätzlicher Dienst an einem laut Turnus freien Tag. */
+export interface FlexDay { id: string; staffId: string; date: string; byEmployer: boolean; createdBy: string; createdAt: string }
 
 export type VacStatus = 'wunsch' | 'vorgemerkt' | 'abgelehnt' | 'genehmigt';
 export interface VacationReq {
@@ -64,6 +78,10 @@ export interface VacationReq {
   note: string;
   status: VacStatus;
   reason: string;
+  /** Änderungs- oder Stornowunsch der Person zu einem vorgemerkten/genehmigten Urlaub */
+  changeKind: '' | 'storno' | 'aenderung';
+  changeFrom: string | null;
+  changeTo: string | null;
   fk4Name: string | null;
   fk4At: string | null;
   fk3Name: string | null;
@@ -172,8 +190,12 @@ export interface Staff {
   rules?: PersonRules;
   /** aus dem Team entfernt (Historie bleibt) */
   archived?: boolean;
-  /** Urlaubsanspruch in Diensttagen (leer = Standard aus den Einstellungen) */
+  /** Urlaubsanspruch fest eingetragen (leer = berechnet) */
   vacationDays?: number | null;
+  /** Teilzeit in Prozent (leer = 100) */
+  partTimePct?: number | null;
+  /** Zusatzurlaub Wechselschicht: null = aus dem Turnus erkennen */
+  shiftBonus?: boolean | null;
 }
 
 export interface Entry { staffId: string; date: string; code: string; flex: boolean }
@@ -252,18 +274,18 @@ export const DEFAULT_SETTINGS: DpSettings = {
   baseShifts: ['F', 'M', 'MF', 'M/F', 'M/S', 'S', 'S/N', 'N'],
   codes: [
     { code: 'U', label: 'Urlaub', bg: '#1E9E3E', fg: '#FFFFFF', counter: 'U' },
-    { code: 'UG', label: 'UG', bg: '#92D050', fg: '#0F172A', counter: 'UG' },
-    { code: 'Z', label: 'Z-Tag', bg: '#1E9E3E', fg: '#FFFFFF', counter: 'Z & T' },
-    { code: 'ZG', label: 'ZG', bg: '#92D050', fg: '#0F172A', counter: 'Z & T' },
-    { code: 'T', label: 'T', bg: '#1E9E3E', fg: '#FFFFFF', counter: 'Z & T' },
+    { code: 'UG', label: 'Urlaub gewünscht', bg: '#92D050', fg: '#0F172A', counter: 'UG' },
+    { code: 'Z', label: 'Zeitausgleich', bg: '#1E9E3E', fg: '#FFFFFF', counter: 'Z & T' },
+    { code: 'ZG', label: 'Zeitausgleich gewünscht', bg: '#92D050', fg: '#0F172A', counter: 'Z & T' },
+    { code: 'T', label: 'Tarifliche Freistellung', bg: '#1E9E3E', fg: '#FFFFFF', counter: 'Z & T' },
     { code: 'K', label: 'Krank', bg: '#E02424', fg: '#FFFFFF', counter: 'K / KID' },
-    { code: 'KID', label: 'KID', bg: '#E02424', fg: '#FFFFFF', counter: 'K / KID' },
+    { code: 'KID', label: 'Krank im Dienst (KiD)', bg: '#E02424', fg: '#FFFFFF', counter: 'K / KID' },
     { code: 'W', label: 'Weiterbildung', bg: '#FFEB3B', fg: '#0F172A', counter: 'W / WS' },
     { code: 'WS', label: 'WS', bg: '#FFEB3B', fg: '#0F172A', counter: 'W / WS' },
     { code: 'BR', label: 'BR', bg: '#5DADE2', fg: '#0F172A', counter: '' },
-    { code: 'A', label: 'A', bg: '#5DADE2', fg: '#0F172A', counter: '' },
+    { code: 'A', label: 'Arbeitsbefreiung', bg: '#5DADE2', fg: '#0F172A', counter: '' },
     { code: 'DT', label: 'Diensttausch', bg: '#C6EFCE', fg: '#14532D', counter: 'DT' },
-    { code: 'D', label: 'D', bg: '#E2E8F0', fg: '#0F172A', counter: 'D' },
+    { code: 'D', label: 'Dienstreise', bg: '#E2E8F0', fg: '#0F172A', counter: 'D' },
     { code: 'CO', label: 'Check Out', bg: '#B39DDB', fg: '#0F172A', counter: '' },
     { code: 'ZD', label: 'Zusatzdienst', bg: '#BFBFBF', fg: '#0F172A', counter: '' },
   ],
@@ -280,9 +302,9 @@ export const DEFAULT_SETTINGS: DpSettings = {
   presets: { T1: ['F', 'M', 'S', 'N'], T2: ['F', 'M', 'S', 'N'], PA: ['F', 'M', 'S'], AK: ['F', 'M', 'S'], AN: ['F', 'M', 'S'] },
   detailShifts: false,
   dispo: {
-    // PA braucht wie T2 die Qualifikation T2; Ankunft und MAUS gehören zum Arbeitsplatz AN. AK bitte im Regelwerk zuordnen.
-    qualFor: { T1: ['T1'], T2: ['T2'], PA: ['T2'], AN: ['Ankunft', 'MAUS'], AK: [] },
-    qualAll: { T1: true, T2: true, PA: true, AN: true, AK: true },
+    // PA braucht wie T2 die Qualifikation T2; Ankunft und MAUS gehören zum Arbeitsplatz AN; AK: irgendeine Qualifikation genügt („*“).
+    qualFor: { T1: ['T1'], T2: ['T2'], PA: ['T2'], AN: ['Ankunft', 'MAUS'], AK: ['*'] },
+    qualAll: { T1: true, T2: true, PA: true, AN: true, AK: false },
     allowPlanned: false,
     usePreferences: true,
     balance: true,
@@ -291,7 +313,7 @@ export const DEFAULT_SETTINGS: DpSettings = {
     nakedRest: true,
     carpools: true,
   },
-  vacation: { approvers: [], maxParallel: 4, defaultDays: 30, wishDeadline: '' },
+  vacation: { approvers: [], maxParallel: 6, baseDays: 28, shiftBonusDays: 5, wishYear: null, wishDeadline: '', flexOwn: 4, flexEmployer: 2, flexOpenYears: [], redAt: 13, yellowAt: 15 },
 };
 
 export const GROUP_NAMES: Record<ShiftGroup, string> = { F: 'Frühdienst', M: 'Mitteldienst', S: 'Spätdienst', N: 'Nachtdienst' };
@@ -529,4 +551,48 @@ export function vacationWorkDays(st: Staff, from: string, to: string, s: DpSetti
     if (isWork(c.base, s)) n++;
   }
   return n;
+}
+
+/** Arbeitet laut Grundturnus Früh, Spät und Nacht (Voraussetzung für den tariflichen Zusatzurlaub). */
+export function isShiftWorker(st: Staff, s: DpSettings): boolean {
+  const groups = new Set<string>();
+  for (const b of st.rhythm) {
+    if (!b) continue;
+    if (b === 'S/N') { groups.add('S'); groups.add('N'); continue; }
+    const g = groupOf(parseCode(b, s).shift, s);
+    if (g) groups.add(g);
+  }
+  return groups.has('F') && groups.has('S') && groups.has('N');
+}
+
+/** Urlaubsanspruch: fest eingetragen, sonst Grundanspruch anteilig nach Teilzeit plus Zusatzurlaub Wechselschicht. */
+export function entitlementOf(st: Staff, s: DpSettings): { total: number; base: number; bonus: number; manual: boolean } {
+  if (st.vacationDays != null) return { total: st.vacationDays, base: st.vacationDays, bonus: 0, manual: true };
+  const base = Math.round((s.vacation.baseDays * (st.partTimePct ?? 100)) / 100);
+  const bonus = (st.shiftBonus ?? isShiftWorker(st, s)) ? s.vacation.shiftBonusDays : 0;
+  return { total: base + bonus, base, bonus, manual: false };
+}
+
+/**
+ * Schichtstärke eines Tages für die Urlaubs- und Flexplanung: alle, die laut Turnus Dienst haben,
+ * minus Urlaub (Wünsche, vorgemerkt, genehmigt) und Abwesenheiten im Plan, plus Flextage.
+ */
+export function planStrength(date: string, staff: Staff[], vacations: VacationReq[], flex: FlexDay[], entries: Map<string, Entry>, s: DpSettings): number {
+  const away = new Set(vacations.filter((v) => v.status !== 'abgelehnt' && v.from <= date && date <= v.to).map((v) => v.staffId));
+  let n = 0;
+  for (const st of staff) {
+    if (!st.inPlan || st.archived) continue;
+    const base = cellFor(st, date, entries, s, 'rhythmus').base;
+    if (!isWork(base, s) || away.has(st.id)) continue;
+    const e = entries.get(entryKey(st.id, date));
+    if (e && parseCode(e.code, s).status) continue; // U, K, Z … im Plan
+    n++;
+  }
+  return n + flex.filter((f) => f.date === date && !away.has(f.staffId)).length;
+}
+
+export function strengthColor(n: number, s: DpSettings): { bg: string; fg: string } | null {
+  if (n <= s.vacation.redAt) return { bg: '#FECACA', fg: '#991B1B' };
+  if (n <= s.vacation.yellowAt) return { bg: '#FEF3C7', fg: '#92400E' };
+  return null;
 }

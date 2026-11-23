@@ -66,10 +66,18 @@ export default function DpSettingsScreen() {
         <View style={styles.row}>
           <View style={styles.f}><TextField label="Höchstens gleichzeitig im Urlaub" value={String(s.vacation.maxParallel)} keyboardType="number-pad"
             onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, maxParallel: n } }); }} /></View>
-          <View style={styles.f}><TextField label="Urlaubsanspruch (Diensttage), Standard" value={String(s.vacation.defaultDays)} keyboardType="number-pad"
-            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, defaultDays: n } }); }} /></View>
-          <View style={styles.f}><TextField label="Wünsche bis (TT.MM., optional)" value={s.vacation.wishDeadline} placeholder="31.01."
-            onChangeText={(v) => set({ vacation: { ...s.vacation, wishDeadline: v } })} /></View>
+          <View style={styles.f}><TextField label="Urlaubsanspruch Vollzeit (Tage)" value={String(s.vacation.baseDays)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, baseDays: n } }); }} hint="Teilzeit anteilig" /></View>
+          <View style={styles.f}><TextField label="Zusatzurlaub Wechselschicht F/S/N (Tage)" value={String(s.vacation.shiftBonusDays)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, shiftBonusDays: n } }); }} /></View>
+          <View style={styles.f}><TextField label="Flextage selbst gewählt" value={String(s.vacation.flexOwn)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, flexOwn: n } }); }} /></View>
+          <View style={styles.f}><TextField label="Flextage vom Arbeitgeber" value={String(s.vacation.flexEmployer)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, flexEmployer: n } }); }} /></View>
+          <View style={styles.f}><TextField label="Rot bis Schichtstärke" value={String(s.vacation.redAt)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, redAt: n } }); }} /></View>
+          <View style={styles.f}><TextField label="Gelb bis Schichtstärke" value={String(s.vacation.yellowAt)} keyboardType="number-pad"
+            onChangeText={(v) => { const n = Number(v); if (Number.isInteger(n) && n >= 0) set({ vacation: { ...s.vacation, yellowAt: n } }); }} /></View>
         </View>
       </Card>
 

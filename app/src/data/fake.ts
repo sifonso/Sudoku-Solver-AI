@@ -120,6 +120,14 @@ export function createFakeApi(db: DB = seed()): Api & { _db: DB } {
         .filter((m) => m.userId === s.userId && m.status === 'active')
         .map((member): Membership => ({ member, tenant: tenantOf(member.tenantId) }));
     },
+    async renameTenant(tenantId, name) {
+      await wait();
+      const s = requireSession();
+      if (!db.members.some((m) => m.tenantId === tenantId && m.userId === s.userId && m.role === 'chef' && m.status === 'active')) throw new ApiError('forbidden');
+      const t = db.tenants.find((x) => x.id === tenantId);
+      if (!t || !name.trim()) throw new ApiError('invalid_entry');
+      t.name = name.trim();
+    },
     async createTenant({ slug, name, displayName, initials }) {
       await wait();
       const s = requireSession();

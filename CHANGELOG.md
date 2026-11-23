@@ -2,6 +2,18 @@
 
 Änderungen an der App, neueste zuerst. Dieselben Einträge zeigt die App unter Mehr → Änderungen an der App (Quelle: app/src/changelog.ts).
 
+## 0.9 · 23.11.2026
+
+- Flughafen München GmbH (FMG): Abteilungen statt Betrieb; Abteilungsname änderbar, weitere Abteilungen mit eigenem Team, Turnus und Regelwerk anlegen und wechseln
+- AK braucht keine eigene Qualifikation: jede beliebige Qualifikation genügt
+- Kürzel: UG Urlaub gewünscht, ZG Zeitausgleich gewünscht, Z Zeitausgleich, T tarifliche Freistellung, KiD Krank im Dienst, A Arbeitsbefreiung, D Dienstreise
+- Urlaubsanspruch: 28 Tage bei Vollzeit, Teilzeit anteilig, plus Zusatzurlaub für Wechselschicht F/S/N (Zahl einstellbar, je Person übersteuerbar)
+- Abgabefrist für Urlaubswünsche je Jahr; FK4 / SL schickt die Aufforderung an alle
+- Genehmigten Urlaub ändern oder stornieren; Mitarbeitende beantragen Änderung oder Storno, FK4 / SL entscheidet
+- Urlaubsübersicht nach Grundturnus der Gruppe mit Schichtstärke je Tag: bis 13 rot, 14 bis 15 gelb (Grenzen einstellbar)
+- Flextage: 4 selbst gewählt, 2 vom Arbeitgeber; Auswahl an kritischen Tagen, nachdem FK4 / SL die Urlaubsplanung freigegeben hat
+- Regel „gleichzeitig im Urlaub“ standardmäßig 6, Ausnahmen bleiben möglich
+
 ## 0.8 · 23.11.2026
 
 - Jahresurlaubsplanung: Wünsche mit Priorität, FK4 / SL merkt vor und genehmigt nach dem mündlichen OK der FK3; genehmigter Urlaub steht als U im Dienstplan

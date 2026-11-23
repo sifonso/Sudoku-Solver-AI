@@ -1,7 +1,7 @@
 // Dienstplan gegen Supabase (Tabellen dp_* und RPCs aus Migration 20261120120000_dienstplan).
 import { ApiError } from '../data/api';
 import { q, sharedClient } from '../data/supabase';
-import type { AuditEntry, DocItem, DpComment, DpSettings, Staff, SwapOffer, VacationReq } from './model';
+import type { AuditEntry, DocItem, FlexDay, DpComment, DpSettings, Staff, SwapOffer, VacationReq } from './model';
 import { mergeSettings, type DpApi } from './store';
 
 type Row = Record<string, any>;
@@ -72,13 +72,29 @@ export function dpSupabase(): DpApi {
     async vacations(tenantId, year) {
       const rows: Row[] = await q(client().from('dp_vacation').select('*').eq('tenant_id', tenantId).eq('year', year).order('date_from'));
       return rows.map((r): VacationReq => ({ id: r.id, staffId: r.staff_id, year: r.year, from: r.date_from, to: r.date_to, priority: r.priority,
-        note: r.note, status: r.status, reason: r.reason, fk4Name: r.fk4_name, fk4At: r.fk4_at, fk3Name: r.fk3_name, fk3At: r.fk3_at, createdAt: r.created_at }));
+        note: r.note, status: r.status, reason: r.reason, changeKind: r.change_kind ?? '', changeFrom: r.change_from, changeTo: r.change_to, fk4Name: r.fk4_name, fk4At: r.fk4_at, fk3Name: r.fk3_name, fk3At: r.fk3_at, createdAt: r.created_at }));
     },
     async vacWish(tenantId, { from, to, priority, note, staffId }, actor) {
       await q(client().rpc('dp_vac_wish', { p_tenant: tenantId, p_from: from, p_to: to, p_priority: priority, p_note: note,
         p_staff: staffId && staffId !== actor.staffId ? staffId : null }));
     },
     async vacDelete(_t, id) { await q(client().rpc('dp_vac_delete', { p_id: id })); },
+    async vacUpdate(_t, id, { from, to, priority, note }) {
+      await q(client().rpc('dp_vac_update', { p_id: id, p_from: from, p_to: to, p_priority: priority, p_note: note }));
+    },
+    async vacChangeRequest(_t, id, { kind, from, to }) {
+      await q(client().rpc('dp_vac_change_request', { p_id: id, p_kind: kind, p_from: from ?? null, p_to: to ?? null }));
+    },
+    async vacChangeDecide(_t, id, ok) { await q(client().rpc('dp_vac_change_decide', { p_id: id, p_ok: ok })); },
+    async flex(tenantId, year) {
+      const rows: Row[] = await q(client().from('dp_flex').select('*').eq('tenant_id', tenantId).gte('date', `${year}-01-01`).lte('date', `${year}-12-31`));
+      return rows.map((r): FlexDay => ({ id: r.id, staffId: r.staff_id, date: r.date, byEmployer: r.by_employer, createdBy: r.created_by, createdAt: r.created_at }));
+    },
+    async flexAdd(tenantId, { date, staffId, byEmployer }, actor) {
+      await q(client().rpc('dp_flex_add', { p_tenant: tenantId, p_date: date, p_staff: staffId && staffId !== actor.staffId ? staffId : null, p_employer: !!byEmployer }));
+    },
+    async flexDelete(_t, id) { await q(client().rpc('dp_flex_delete', { p_id: id })); },
+    async notifyAll(tenantId, title, body) { await q(client().rpc('dp_notify_all', { p_tenant: tenantId, p_title: title, p_body: body })); },
     async vacReview(_t, id, ok, reason) { await q(client().rpc('dp_vac_review', { p_id: id, p_ok: ok, p_reason: reason })); },
     async vacRelease(_t, id, ok, reason) { await q(client().rpc('dp_vac_release', { p_id: id, p_ok: ok, p_reason: reason })); },
 

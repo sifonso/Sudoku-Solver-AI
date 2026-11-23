@@ -1,3 +1,4 @@
+import { COMPANY } from '../domain/company';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ export function AuthFrame({ eyebrow, title, intro, children }: {
             <Pattern kind="streifen" fg={scheme === 'dark' ? c.accentSoft : c.accentSoft} bg={c.accent} tile={26} />
           </View>
           <View style={[styles.card, { backgroundColor: c.surfaceRaised, borderColor: c.border }]}>
+            <Text variant="xs" color="textMuted">{COMPANY.name} ({COMPANY.short})</Text>
             <Text variant="label" color="onHighlightSoft">{eyebrow}</Text>
             <Text variant="xl" accessibilityRole="header">{title}</Text>
             <Text variant="sm" color="textMuted">{intro}</Text>

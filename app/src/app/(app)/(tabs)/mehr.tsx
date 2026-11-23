@@ -8,12 +8,14 @@ import { setDemoAs, useDemoAs, useDp } from '../../../dienstplan/hooks';
 import { PickChips } from '../../../dienstplan/ui';
 import { useActive, useDeleteAccount, useSignOut } from '../../../data/session';
 import type { Role } from '../../../domain/types';
+import { COMPANY } from '../../../domain/company';
 import { AppScreen } from '../../../features/AppScreen';
 import { useTheme } from '../../../theme';
 import { Avatar, Banner, Button, Card, ListRow, SectionHeader, Text } from '../../../ui';
 
 type Item = { label: string; href: Href; id: string; roles: Role[] | 'all' };
 const ITEMS: Item[] = [
+  { id: 'AB', label: 'Abteilung', href: '/abteilungen', roles: 'all' },
   { id: 'UP', label: 'Urlaubsplanung (Jahr)', href: '/urlaubsplanung', roles: 'all' },
   { id: 'DOC', label: 'Regeln und Betriebsvereinbarungen', href: '/dokumente', roles: 'all' },
   { id: 'DP1', label: 'Grundrhythmus (16 Wochen)', href: '/rhythmus', roles: 'all' },
@@ -53,7 +55,7 @@ export default function MoreScreen() {
   const demoAs = useDemoAs();
   const items = ITEMS.filter((i) => i.roles === 'all' || i.roles.includes(member.role));
   return (
-    <AppScreen title="Mehr" eyebrow={tenant.name}>
+    <AppScreen title="Mehr" eyebrow={`${COMPANY.short} · ${tenant.name}`}>
       <Card style={styles.me}>
         <Avatar initials={member.initials} employment={member.employmentType} size={48} />
         <View style={{ flex: 1 }}>

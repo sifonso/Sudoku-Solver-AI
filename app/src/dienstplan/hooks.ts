@@ -167,6 +167,11 @@ export function useVacations(year: number) {
   return useQuery({ queryKey: ['dp-vac', tenant.id, year], queryFn: () => dp.vacations(tenant.id, year) });
 }
 
+export function useFlex(year: number) {
+  const { tenant } = useActive();
+  return useQuery({ queryKey: ['dp-flex', tenant.id, year], queryFn: () => dp.flex(tenant.id, year) });
+}
+
 export function useDocs() {
   const { tenant } = useActive();
   return useQuery({ queryKey: ['dp-docs', tenant.id], queryFn: () => dp.docs(tenant.id) });
@@ -180,7 +185,7 @@ export function useDpAction<T>(fn: (tenantId: string, input: T, actor: Actor) =>
   return useMutation({
     mutationFn: (input: T) => fn(tenant.id, input, actor),
     onSuccess: () => {
-      for (const k of ['dp-vac', 'dp-docs', 'dp-entries', 'dp-audit', 'notifications']) qc.invalidateQueries({ queryKey: [k] });
+      for (const k of ['dp-vac', 'dp-flex', 'dp-docs', 'dp-entries', 'dp-audit', 'notifications', 'dp']) qc.invalidateQueries({ queryKey: [k] });
     },
   });
 }

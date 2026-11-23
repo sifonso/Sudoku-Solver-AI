@@ -32,6 +32,8 @@ export const baseGroup = (code: string, s: DpSettings): ShiftGroup | null => bas
 export function qualified(st: Staff, wp: string, s: DpSettings): boolean {
   const cols = (s.dispo.qualFor[wp] ?? []).filter(Boolean);
   if (!cols.length) return true;
+  // „*“ = irgendeine Qualifikation genügt (z. B. AK)
+  if (cols.includes('*')) return s.qualColumns.some((q) => (st.quals?.[q] ?? '') === 'X' || (s.dispo.allowPlanned && st.quals?.[q] === '(X)'));
   const ok = (col: string) => {
     const v = st.quals?.[col] ?? '';
     return v === 'X' || (s.dispo.allowPlanned && v === '(X)');

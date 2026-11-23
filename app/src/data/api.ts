@@ -31,7 +31,11 @@ export type ApiErrorCode =
   | 'not_an_applicant'
   | 'invalid_entry'
   | 'invalid_code'
-  | 'already_member';
+  | 'already_member'
+  | 'flex_closed'
+  | 'flex_not_free'
+  | 'flex_limit'
+  | 'closed';
 
 export interface Membership {
   tenant: Tenant;
@@ -63,6 +67,8 @@ export interface Api {
   // Mandant (rpc create_tenant, select members)
   myMemberships(): Promise<Membership[]>;
   createTenant(input: { slug: string; name: string; displayName: string; initials: string }): Promise<string>;
+  /** Abteilungsname ändern (nur chef = FK4 / SL). */
+  renameTenant(tenantId: string, name: string): Promise<void>;
 
   // Stammdaten
   listMembers(tenantId: string): Promise<Member[]>;

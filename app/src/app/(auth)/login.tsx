@@ -40,7 +40,7 @@ export default function LoginScreen() {
     <AuthFrame eyebrow="Anmelden" title="Willkommen zurück" intro="Melde dich mit deiner Arbeits-E-Mail an.">
       {needsTenant ? (
         <View style={styles.join}>
-          <Banner tone="warning" title={`${session?.email ?? 'Dieses Konto'} gehört noch zu keinem Betrieb.`}
+          <Banner tone="warning" title={`${session?.email ?? 'Dieses Konto'} gehört noch zu keiner Abteilung.`}
             body="Gib den Einladungscode von deiner FK4 bzw. SL ein oder melde dich ab."
             action={<Button label="Abmelden" size="sm" variant="secondary" onPress={() => signOut.mutate()} />} />
           <TextField label="Einladungscode" value={joinCode} onChangeText={(v) => setJoinCode(v.toUpperCase())} autoCapitalize="characters"

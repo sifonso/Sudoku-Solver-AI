@@ -11,12 +11,12 @@ test.describe('Konto', () => {
 
   test('ACC-H2 einziger Chef: zweite Bestätigung, dann Konto und Betrieb weg', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill('Testladen');
+    await page.getByLabel('Name der Abteilung').fill('Testladen');
     await page.getByLabel('Dein Name').fill('Kim Test');
     await page.getByLabel('E-Mail').fill('kim@test.de');
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
     await expect(page).toHaveURL(/\/monat$/);
     await openTab(page, 'Mehr');
     await page.getByRole('button', { name: 'Konto löschen' }).click();

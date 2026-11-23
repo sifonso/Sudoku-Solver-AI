@@ -3,8 +3,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  DEFAULT_SETTINGS as S, EMPTY_RULES, cellFor, dayCounters, holidayOf, indexEntries, isWork, parseCode, rhythmIndex, yearStats, type Staff,
+  DEFAULT_SETTINGS as S, EMPTY_RULES, cellFor, dayCounters, entitlementOf, holidayOf, indexEntries, isWork, parseCode, planStrength, rhythmIndex, strengthColor, yearStats, type Staff,
 } from './model.ts';
+import { qualified } from './dispo.ts';
 import { SwapError, planRing, planSwap } from './swap.ts';
 
 const rhythm: string[] = Array.from({ length: 112 }, (_, i) => (i % 7 < 3 ? 'F' : i % 7 < 5 ? 'S/N' : ''));
@@ -159,4 +160,33 @@ test('Urlaubstage zählen nur Diensttage laut Turnus', async () => {
   // rhythm: Mo-Mi F, Do-Fr S/N, Sa-So frei → Woche 04.–10.01.2027 = 5 Diensttage
   assert.equal(vacationWorkDays(person('a'), '2027-01-04', '2027-01-10', S), 5);
   assert.equal(vacationWorkDays(person('a'), '2027-01-09', '2027-01-10', S), 0);
+});
+
+test('Urlaubsanspruch: 28 Tage, Teilzeit anteilig, +5 nur bei F, S und N im Turnus', () => {
+  assert.deepEqual(entitlementOf(person('a'), S), { total: 33, base: 28, bonus: 5, manual: false }); // F und S/N
+  const nurFrueh = person('b', Array.from({ length: 112 }, (_, i) => (i % 7 < 5 ? 'F' : '')));
+  assert.equal(entitlementOf(nurFrueh, S).total, 28);
+  assert.equal(entitlementOf({ ...nurFrueh, partTimePct: 50 }, S).total, 14);
+  assert.equal(entitlementOf({ ...person('c'), shiftBonus: false }, S).total, 28);
+  assert.equal(entitlementOf({ ...person('d'), vacationDays: 30 }, S).total, 30);
+  assert.equal(entitlementOf(person('e'), { ...S, vacation: { ...S.vacation, shiftBonusDays: 3 } }).total, 31);
+});
+
+test('Schichtstärke: Urlaub zieht ab, Flextag zählt dazu, Farben rot bis 13, gelb bis 15', () => {
+  const team = Array.from({ length: 16 }, (_, i) => person(`p${i}`, Array.from({ length: 112 }, () => 'F')));
+  const d = '2027-02-10';
+  const none = new Map();
+  assert.equal(planStrength(d, team, [], [], none, S), 16);
+  const vac = [0, 1, 2].map((i) => ({ id: `v${i}`, staffId: `p${i}`, from: d, to: d, status: 'genehmigt' as const, priority: 1 as const, note: '' }));
+  const n = planStrength(d, team, vac as never, [{ id: 'f', staffId: 'x', date: d, byEmployer: false }] as never, none, S);
+  assert.equal(n, 14);
+  assert.equal(strengthColor(13, S)?.bg, '#FECACA');
+  assert.equal(strengthColor(15, S)?.bg, '#FEF3C7');
+  assert.equal(strengthColor(16, S), null);
+});
+
+test('AK: jede beliebige Qualifikation genügt', () => {
+  const st = { ...person('q'), quals: { [S.qualColumns[0]!]: 'X' } };
+  assert.equal(qualified(st, 'AK', S), true);
+  assert.equal(qualified(person('z'), 'AK', S), false);
 });

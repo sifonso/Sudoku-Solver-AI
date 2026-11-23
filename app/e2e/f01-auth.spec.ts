@@ -12,12 +12,12 @@ test.describe('F01 Registrierung und Anmeldung', () => {
 
   test('F01-H2 neuer Betrieb wird angelegt und hat Standard-Schichttypen', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill('Bäckerei Sonnenschein');
+    await page.getByLabel('Name der Abteilung').fill('Bäckerei Sonnenschein');
     await page.getByLabel('Dein Name').fill('Ali Demir');
     await page.getByLabel('E-Mail').fill('ali@test.de');
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
     await expect(page).toHaveURL(/\/monat$/);
     await openTab(page, 'Plan');
     await expect(page.getByText('Frühschicht').first()).toBeVisible();
@@ -26,8 +26,8 @@ test.describe('F01 Registrierung und Anmeldung', () => {
 
   test('F01-E1 leeres Formular zeigt alle Fehler und schickt nichts ab', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
-    for (const msg of ['Bitte den Namen deines Betriebs eingeben.', 'Bitte deinen Namen eingeben.',
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
+    for (const msg of ['Bitte den Namen deiner Abteilung eingeben.', 'Bitte deinen Namen eingeben.',
       'Bitte eine gültige E-Mail-Adresse eingeben.', 'Mindestens 8 Zeichen.', 'Bitte AGB und Datenschutz bestätigen.']) {
       await expect(page.getByText(msg).first()).toBeVisible();
     }
@@ -36,7 +36,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
 
   test('F01-E2 Umlaute, ß und Emoji ergeben eine gültige Firmenadresse', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill('Grüße & Söhne 🍞 Café');
+    await page.getByLabel('Name der Abteilung').fill('Grüße & Söhne 🍞 Café');
     await expect(page.getByLabel('Firmenadresse')).toHaveValue('gruesse-soehne-cafe');
   });
 
@@ -44,12 +44,12 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     const name = 'Gasthaus zur langen Bezeichnung mit sehr vielen Zeichen GmbH';
     expect(name.length).toBeGreaterThanOrEqual(60);
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill(name);
+    await page.getByLabel('Name der Abteilung').fill(name);
     await page.getByLabel('Dein Name').fill('Lange Name');
     await page.getByLabel('E-Mail').fill('lang@test.de');
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
     await expect(page).toHaveURL(/\/monat$/);
     await openTab(page, 'Plan');
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -58,35 +58,35 @@ test.describe('F01 Registrierung und Anmeldung', () => {
 
   test('F01-E4 Doppelklick auf "Betrieb anlegen" legt nur einen Betrieb an', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill('Doppelklick Bistro');
+    await page.getByLabel('Name der Abteilung').fill('Doppelklick Bistro');
     await page.getByLabel('Dein Name').fill('Dana Doppel');
     await page.getByLabel('E-Mail').fill('dana@test.de');
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).dblclick();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).dblclick();
     await expect(page).toHaveURL(/\/monat$/);
     await expect(page.getByRole('alert').filter({ hasText: /vergeben|Konto|nicht möglich|Fehler/ })).toHaveCount(0);
   });
 
   test('F01-N1 schon vergebene E-Mail wird gemeldet', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill('Zweitbetrieb');
+    await page.getByLabel('Name der Abteilung').fill('Zweitbetrieb');
     await page.getByLabel('Dein Name').fill('Jana Wilke');
     await page.getByLabel('E-Mail').fill('chef@demo.de');
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
     await expect(page.getByText('Mit dieser E-Mail gibt es schon ein Konto.', { exact: false })).toBeVisible();
   });
 
   test('F01-N2 schon vergebene Firmenadresse wird gemeldet', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByLabel('Name des Betriebs').fill('Café Morgenrot');
+    await page.getByLabel('Name der Abteilung').fill('Café Morgenrot');
     await page.getByLabel('Dein Name').fill('Neu Person');
     await page.getByLabel('E-Mail').fill('neu@test.de');
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
     await expect(page.getByText('Diese Firmenadresse ist vergeben.', { exact: false })).toBeVisible();
   });
 
@@ -141,7 +141,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await expect(page).toHaveURL(/\/monat$/);
     await openTab(page, 'Schichten');
     await expect(page.getByText('Hallo Nora')).toBeVisible();
-    await expect(page.getByText('Café Morgenrot').first()).toBeVisible();
+    await expect(page.getByText('Abteilung (Demo)').first()).toBeVisible();
   });
 
   test('F01-N3 ungültiger Einladungscode wird abgelehnt', async ({ page }) => {
@@ -152,7 +152,7 @@ test.describe('F01 Registrierung und Anmeldung', () => {
     await page.getByLabel('Passwort').fill('geheim123');
     await page.getByRole('checkbox').click();
     await page.getByRole('button', { name: 'Konto anlegen und beitreten' }).click();
-    await expect(page.getByText('gehört noch zu keinem Betrieb', { exact: false })).toBeVisible();
+    await expect(page.getByText('gehört noch zu keiner Abteilung', { exact: false })).toBeVisible();
     await page.getByLabel('Einladungscode').fill('ABCD-EFGH');
     await page.getByRole('button', { name: 'Beitreten' }).click();
     await expect(page.getByText('Dieser Einladungscode ist ungültig, abgelaufen oder schon benutzt.')).toBeVisible();

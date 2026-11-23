@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useMembers } from '../../../data/hooks';
 import { useActive } from '../../../data/session';
 import { canLead, useDeleteStaff, useDp, useSaveStaff } from '../../../dienstplan/hooks';
-import { displayName, type Staff, type TempRhythm } from '../../../dienstplan/model';
+import { displayName, entitlementOf, type Staff, type TempRhythm } from '../../../dienstplan/model';
 import { PersonPicker, PickChips } from '../../../dienstplan/ui';
 import { AppScreen } from '../../../features/AppScreen';
 import { errorText } from '../../../features/errors';
@@ -95,8 +95,22 @@ export default function PersonScreen() {
         </View>
         <View style={styles.row2}>
           <View style={styles.f}><TextField label="WhatsApp" value={s.whatsapp} editable={lead} onChangeText={(v) => set({ whatsapp: v })} hint="ok / nok" /></View>
- {lead ? <View style={styles.f}><TextField label="Urlaubsanspruch (Diensttage)" value={s.vacationDays == null ? '' : String(s.vacationDays)} keyboardType="number-pad"
-            placeholder="Standard" onChangeText={(v) => set({ vacationDays: v.trim() === '' ? null : Number.isInteger(Number(v)) ? Number(v) : s.vacationDays })} /></View> : null}
+          {lead ? <View style={styles.f}><TextField label="Teilzeit (% von Vollzeit)" value={s.partTimePct == null ? '' : String(s.partTimePct)} keyboardType="number-pad"
+            placeholder="100" onChangeText={(v) => { const n = Number(v); set({ partTimePct: v.trim() === '' ? null : Number.isFinite(n) && n > 0 && n <= 100 ? n : s.partTimePct }); }} /></View> : null}
+          {lead ? <View style={styles.f}><TextField label="Urlaubsanspruch fest (Tage)" value={s.vacationDays == null ? '' : String(s.vacationDays)} keyboardType="number-pad"
+            placeholder="automatisch" onChangeText={(v) => set({ vacationDays: v.trim() === '' ? null : Number.isInteger(Number(v)) ? Number(v) : s.vacationDays })} /></View> : null}
+        </View>
+        {lead && dp.data ? (
+          <>
+            <PickChips label="Zusatzurlaub Wechselschicht (F, S, N)" showLabel value={s.shiftBonus == null ? 'auto' : s.shiftBonus ? 'ja' : 'nein'}
+              onChange={(v) => set({ shiftBonus: v === 'auto' ? null : v === 'ja' })}
+              options={[{ value: 'auto', label: 'automatisch (Turnus)' }, { value: 'ja', label: 'ja' }, { value: 'nein', label: 'nein' }]} />
+            {(() => { const e = entitlementOf(s, dp.data.settings); return (
+              <Text variant="sm" color="textMuted">Urlaubsanspruch: {e.total} Tage{e.manual ? ' (fest eingetragen)' : ` = ${e.base} Grundurlaub${e.bonus ? ` + ${e.bonus} Wechselschicht` : ''}`}</Text>
+            ); })()}
+          </>
+        ) : null}
+        <View style={styles.row2}>
           {lead ? <View style={styles.f}><TextField label="Personalnummer" value={s.persNr} onChangeText={(v) => set({ persNr: v })} hint="nur für FK4 / SL sichtbar" /></View> : null}
         </View>
       </Card>

@@ -5,6 +5,10 @@ export function errorText(e: unknown): string {
   const code = e instanceof ApiError ? e.code : null;
   switch (code) {
     case 'forbidden': return 'Dafür fehlen dir die Rechte.';
+    case 'flex_closed': return 'Flextage für dieses Jahr sind noch nicht freigegeben.';
+    case 'flex_not_free': return 'Flextage gehen nur an Tagen, die laut Turnus frei sind.';
+    case 'flex_limit': return 'Alle Flextage für dieses Jahr sind schon vergeben.';
+    case 'closed': return 'Neue Betriebe können nur von FK4 / SL angelegt werden.';
     case 'last_chef': return 'Es muss mindestens eine aktive FK4 / SL bleiben. Ernenne zuerst jemand anderen zur FK4 / SL.';
     case 'initials_taken': return 'Dieses Kürzel hat schon jemand im Team.';
     case 'member_limit_reached': return 'Für diesen Betrieb ist die Personenzahl begrenzt. Bitte den Administrator fragen.';

@@ -17,7 +17,7 @@ test.describe('Dienstplan', () => {
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(cell).toHaveAttribute('aria-label', /T2\/N/);
     await cell.click();
-    await page.getByRole('radio', { name: 'Urlaub' }).click();
+    await page.getByRole('radio', { name: 'Urlaub', exact: true }).click();
     await page.getByRole('button', { name: 'Speichern' }).click();
     await expect(cell).toHaveAttribute('aria-label', /: U$/);
   });
@@ -243,8 +243,66 @@ test.describe('Dienstplan', () => {
     await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
     await page.getByRole('button', { name: 'Vormerken' }).click();
     await page.getByRole('button', { name: 'Genehmigen', exact: true }).click();
-    await expect(page.getByText('Genehmigt', { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Berger, KW 10: Genehmigt/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Genehmigen (nach OK der FK3) · 0' })).toBeVisible();
+    await page.getByRole('button', { name: 'März im Detail' }).click();
+    await expect(page.getByLabel(/^Berger 8\.: .*Urlaub Genehmigt/)).toBeVisible();
+  });
+
+  test('DP-16 Storno beantragen, FK4/SL übernimmt; Flextage nach Freigabe', async ({ page }) => {
+    await loginDp(page, 'mira');
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
+    await page.getByLabel('Von').fill('05.07.2027');
+    await page.getByLabel('Bis').fill('09.07.2027');
+    await page.getByRole('button', { name: 'Wunsch eintragen' }).click();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.chef }).click();
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
+    await page.getByRole('button', { name: 'Vormerken' }).click();
+    await page.getByRole('button', { name: 'Genehmigen', exact: true }).click();
+    await page.getByRole('checkbox', { name: /Flextage 2027 für Mitarbeitende freigeben/ }).click();
+    await expect(page.getByText('Aufforderung verschickt.')).toBeVisible();
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.mira }).click();
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
+    await page.getByRole('button', { name: 'Storno beantragen' }).click();
+    await expect(page.getByText('Storno beantragt', { exact: false })).toBeVisible();
+    const chips = page.getByRole('button', { name: /^Flextag \d/ });
+    if (await chips.count()) {
+      await chips.first().click();
+      await expect(page.getByText(/selbst gewählt 1 von 4/)).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Zurück', exact: true }).click();
+    await page.getByRole('button', { name: 'Abmelden' }).click();
+    await page.getByRole('button', { name: DEMO.chef }).click();
+    await expect(page.getByText('Besetzung').first()).toBeVisible();
+    await openTab(page, 'Mehr');
+    await page.getByRole('button', { name: /^Urlaubsplanung/ }).click();
+    await expect(page.getByText('Wunsch: Urlaub stornieren')).toBeVisible();
+    await page.getByRole('button', { name: 'Übernehmen' }).click();
+    await expect(page.getByText('Wunsch: Urlaub stornieren')).toHaveCount(0);
+  });
+
+  test('DP-17 Abteilung umbenennen und neue Abteilung anlegen', async ({ page }) => {
+    await loginDp(page, 'chef');
+    await openTab(page, 'Mehr');
+    await expect(page.getByText(/FMG · /).first()).toBeVisible();
+    await page.getByRole('button', { name: /^Abteilung\W*(AB)?$/ }).click();
+    await page.getByLabel('Name der Abteilung').fill('Verkehrszentrale');
+    await page.getByRole('button', { name: 'Namen speichern' }).click();
+    await expect(page.getByText('Gespeichert.')).toBeVisible();
+    await page.getByLabel('Name der neuen Abteilung').fill('Zweite Abteilung');
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
+    await expect(page.getByRole('button', { name: 'Zu Verkehrszentrale wechseln' })).toBeVisible();
+    await expect(page.getByLabel('Name der Abteilung')).toHaveValue('Zweite Abteilung');
+    await page.getByRole('button', { name: 'Zu Verkehrszentrale wechseln' }).click();
+    await expect(page.getByLabel('Name der Abteilung')).toHaveValue('Verkehrszentrale');
   });
 
   test('DP-15 Dokumente: FK4/SL legt Regel ab, Mitarbeiter:in liest', async ({ page }) => {

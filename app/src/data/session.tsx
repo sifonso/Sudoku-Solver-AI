@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { createContext, useContext, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Member, Session, Tenant } from '../domain/types';
+import type { Membership } from './api';
 import { api } from './client';
 
 type Ctx = {
@@ -10,7 +12,12 @@ type Ctx = {
   member: Member | null;
   /** Angemeldet, aber noch keine Firma (direkt nach der Registrierung). */
   needsTenant: boolean;
+  /** Alle Abteilungen, in denen die Person Mitglied ist. */
+  memberships: Membership[];
+  /** Abteilung wechseln; die Auswahl bleibt auf dem Gerät gespeichert. */
+  selectTenant: (tenantId: string) => void;
 };
+const ACTIVE_KEY = 'dp-active-tenant';
 const SessionContext = createContext<Ctx | null>(null);
 
 /**
@@ -45,14 +52,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     staleTime: Infinity,
     retry: 1,
   });
-  // Eine Firma pro Person im Durchstich; Firmenwechsler folgt (architecture.md: Mandanten).
-  const active = memberships.data?.[0] ?? null;
+  // Mehrere Abteilungen: zuletzt gewählte merken, sonst die erste.
+  const [chosen, setChosen] = useState<string | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(ACTIVE_KEY).then((v) => v && setChosen((c) => c ?? v)).catch(() => {});
+  }, []);
+  const list = memberships.data ?? [];
+  const active = list.find((m) => m.tenant.id === chosen) ?? list[0] ?? null;
+  const selectTenant = (id: string) => {
+    setChosen(id);
+    AsyncStorage.setItem(ACTIVE_KEY, id).catch(() => {});
+    qc.removeQueries({ predicate: (q) => !['session', 'memberships'].includes(String(q.queryKey[0])) });
+  };
   const value: Ctx = {
     session: session.data ?? null,
     loading: session.isLoading || (!!userId && memberships.isLoading) || (noMembership && complete.isLoading),
     tenant: active?.tenant ?? null,
     member: active?.member ?? null,
     needsTenant: noMembership && !complete.isLoading,
+    memberships: list,
+    selectTenant,
   };
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

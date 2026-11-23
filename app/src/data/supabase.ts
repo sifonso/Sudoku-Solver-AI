@@ -96,6 +96,10 @@ export function fail(e: PostgrestError | { message?: string; code?: string; stat
   if (msg.includes('missing_field') || msg.includes('invalid_number')) throw new ApiError('invalid_entry');
   if (msg.includes('invalid_code')) throw new ApiError('invalid_code');
   if (msg.includes('already_member')) throw new ApiError('already_member');
+  if (msg.includes('flex_closed')) throw new ApiError('flex_closed');
+  if (msg.includes('flex_not_free')) throw new ApiError('flex_not_free');
+  if (msg.includes('flex_limit')) throw new ApiError('flex_limit');
+  if (msg.includes('closed')) throw new ApiError('closed');
   if (msg.includes('invalid_entry')) throw new ApiError('invalid_entry');
   if (msg.includes('not_found')) throw new ApiError('not_found');
   if (msg.includes('Failed to fetch') || msg.includes('Network request failed')) throw new ApiError('network');
@@ -223,6 +227,9 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
     async createTenant({ slug, name, displayName, initials }) {
       return (await q(sb.rpc('create_tenant', { p_slug: slug, p_name: name, p_display_name: displayName, p_initials: initials }))) as string;
+    },
+    async renameTenant(tenantId, name) {
+      await q(sb.from('tenants').update({ name: name.trim() }).eq('id', tenantId).select('id').single());
     },
 
     async listMembers(tenantId) {

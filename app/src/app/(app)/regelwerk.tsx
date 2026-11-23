@@ -90,15 +90,15 @@ export default function RulesScreen() {
 
       <SectionHeader title="Qualifikation je Arbeitsplatz" />
       <Card style={styles.card}>
-        <Text variant="xs" color="textMuted">Mehrfachauswahl möglich. Keine Auswahl = keine Prüfung.</Text>
+        <Text variant="xs" color="textMuted">Mehrfachauswahl möglich. Keine Auswahl = keine Prüfung. „beliebige“ = irgendeine Qualifikation genügt (z. B. AK).</Text>
         {wps.map((wp) => (
           <View key={wp} style={{ gap: 6 }}>
             <View style={styles.row}>
               <Text variant="sm" style={[styles.bold, { width: 44 }]}>{wp}</Text>
-              <Chips values={d.qualFor[wp] ?? []} options={s.qualColumns.map((q) => ({ v: q, l: q }))} label={`Qualifikation ${wp}`}
+              <Chips values={d.qualFor[wp] ?? []} options={[{ v: '*', l: 'beliebige' }, ...s.qualColumns.map((q) => ({ v: q, l: q }))]} label={`Qualifikation ${wp}`}
                 onChange={(v) => setD({ qualFor: { ...d.qualFor, [wp]: v } })} />
             </View>
-            {(d.qualFor[wp] ?? []).length > 1 ? (
+            {(d.qualFor[wp] ?? []).filter((q) => q !== '*').length > 1 ? (
               <View style={{ paddingLeft: 52 }}>
                 <Checkbox label="Alle gewählten nötig (sonst genügt eine)" checked={d.qualAll[wp] !== false} onChange={(v) => setD({ qualAll: { ...d.qualAll, [wp]: v } })} />
               </View>

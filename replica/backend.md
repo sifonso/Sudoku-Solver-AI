@@ -160,3 +160,8 @@ Migration `20261120180000_dienstplan_ring_comments` (live eingespielt, lokal get
 - Migration `20261123090000_urlaub_dokumente` (live, lokal getestet): `app_config.allow_new_tenants` (Sperre für neue Betriebe), `dp_vacation` mit `dp_vac_wish/review/release/delete`, FK3 über `dp_settings.data.vacation.approvers` (`dp_is_fk3`, `dp_can_release`), genehmigter Urlaub als U an Diensttagen (Quelle „urlaub“ im Protokoll), Mitteilungen an FK4/SL, FK3 und Betroffene. `dp_docs` für Regeln und Betriebsvereinbarungen.
 - Migration `20261123090100_dokumente_storage` (live): privater Bucket `dp-docs` (20 MB je Datei), Pfad `<tenant_id>/…`, Lesen alle im Betrieb, Schreiben/Löschen FK4/SL und FK3.
 - Einführung im geschlossenen Umfeld: `EINFUEHRUNG.md`.
+
+### Nachtrag 2026-11-23 (2): Urlaub ändern, Flextage, Abteilungen
+
+- Migration `20261123140000_urlaub_flex_abteilungen` (lokal getestet, live noch einzuspielen): `dp_vacation.change_kind/change_from/change_to`; `dp_vac_update` (FK4/SL ändert, U im Plan wird neu gesetzt), `dp_vac_change_request` (Mitarbeitende beantragen Änderung oder Storno), `dp_vac_change_decide`; `dp_vac_delete` storniert auch genehmigten Urlaub und entfernt das U. `dp_flex` mit `dp_flex_add/delete`: Grenzen `flexOwn`/`flexEmployer` aus den Einstellungen, eigene Auswahl nur in `flexOpenYears`, nur an turnusfreien Tagen. `dp_notify_all` für die Aufforderung zur Abgabe. `create_tenant` erlaubt aktiven FK4/SL weitere Abteilungen, auch wenn `allow_new_tenants` aus ist.
+- App: Abteilungswechsel (Auswahl auf dem Gerät gespeichert), Abteilungsname über `tenants.name` (Spalten-Grant für chef vorhanden).

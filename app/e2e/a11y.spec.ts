@@ -10,7 +10,7 @@ test.describe('Barrierefreiheit (axe)', () => {
 
   test('A11Y-S01 Registrierung mit Fehlern', async ({ page }) => {
     await page.goto('/registrieren');
-    await page.getByRole('button', { name: 'Betrieb anlegen' }).click();
+    await page.getByRole('button', { name: 'Abteilung anlegen' }).click();
     expect(await axe(page)).toEqual([]);
   });
 

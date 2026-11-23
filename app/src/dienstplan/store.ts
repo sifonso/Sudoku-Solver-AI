@@ -3,7 +3,7 @@
 import { ApiError } from '../data/api';
 import {
   DEFAULT_SETTINGS, addDays as addDaysIso, byIdOf, cellFor, indexEntries, isWork,
-  type AuditEntry, type Carpool, type DocItem, type DpComment, type VacationReq, type DpSeed, type DpSettings, type Entry, type Staff, type SwapLeg, type SwapOffer,
+  type AuditEntry, type Carpool, type DocItem, type FlexDay, type DpComment, type VacationReq, type DpSeed, type DpSettings, type Entry, type Staff, type SwapLeg, type SwapOffer,
 } from './model.ts';
 import { sampleSeed } from './sample';
 import { api as fakeApi } from '../data/fake';
@@ -38,6 +38,18 @@ export interface DpApi {
   vacReview(tenantId: string, id: string, ok: boolean, reason: string, actor: Actor): Promise<void>;
   /** FK3 (ohne FK3: FK4/SL): freigeben, dann U an Diensttagen im Plan */
   vacRelease(tenantId: string, id: string, ok: boolean, reason: string, actor: Actor): Promise<void>;
+
+  /** FK4/SL ändert Zeitraum/Priorität/Notiz; Person nur eigene Wünsche. Genehmigter Urlaub wird im Plan nachgezogen. */
+  vacUpdate(tenantId: string, id: string, input: { from: string; to: string; priority: 1 | 2; note: string }, actor: Actor): Promise<void>;
+  /** Person bittet um Storno oder Änderung eines vorgemerkten/genehmigten Urlaubs. */
+  vacChangeRequest(tenantId: string, id: string, input: { kind: 'storno' | 'aenderung'; from?: string; to?: string }, actor: Actor): Promise<void>;
+  vacChangeDecide(tenantId: string, id: string, ok: boolean, actor: Actor): Promise<void>;
+
+  flex(tenantId: string, year: number): Promise<FlexDay[]>;
+  flexAdd(tenantId: string, input: { date: string; staffId?: string; byEmployer?: boolean }, actor: Actor): Promise<void>;
+  flexDelete(tenantId: string, id: string, actor: Actor): Promise<void>;
+  /** Mitteilung an alle im Betrieb (z. B. Aufforderung zur Urlaubsabgabe). Nur FK4/SL. */
+  notifyAll(tenantId: string, title: string, body: string): Promise<void>;
 
   docs(tenantId: string): Promise<DocItem[]>;
   addDoc(tenantId: string, input: { title: string; category: string; note: string; validFrom: string | null; file: { name: string; mime: string; size: number; base64: string } | null }, actor: Actor): Promise<void>;
@@ -111,8 +123,8 @@ export function asApi<T>(fn: () => T): T {
 /** Darf ein Vorschlag ohne weitere Genehmigung vollzogen werden? */
 export const needsApproval = (o: SwapOffer, s: DpSettings) => s.swapApproval && !o.createdByLead;
 
-function fakeStore(): DpApi {
-  const raw = (globalThis as { __DP_SEED__?: DpSeed }).__DP_SEED__ ?? sampleSeed();
+function fakeStore(seed?: DpSeed): DpApi {
+  const raw = seed ?? (globalThis as { __DP_SEED__?: DpSeed }).__DP_SEED__ ?? sampleSeed();
   const db = {
     settings: mergeSettings(raw.settings),
     staff: clone(raw.staff),
@@ -122,6 +134,7 @@ function fakeStore(): DpApi {
     comments: [] as DpComment[],
     audit: [] as AuditEntry[],
     vacations: [] as VacationReq[],
+    flex: [] as FlexDay[],
     docs: [] as DocItem[],
   };
   const log = (a: Partial<AuditEntry> & { actorName?: string }) => {
@@ -156,6 +169,17 @@ function fakeStore(): DpApi {
     for (const m of fdb.members) if (m.tenantId === tenantId && m.status === 'active' && (m.role === 'chef' || m.role === 'planer')) note(tenantId, m.id, type, title, body);
   };
   const dm = (d: string) => `${d.slice(8)}.${d.slice(5, 7)}.`;
+  const vacUnapply = (v: VacationReq, who: string) => {
+    for (const e of db.entries.filter((x) => x.staffId === v.staffId && x.date >= v.from && x.date <= v.to && x.code === 'U')) put({ ...e, code: '', flex: e.flex }, who, 'urlaub');
+  };
+  const vacApply = (v: VacationReq, who: string) => {
+    const st = db.staff.find((x) => x.id === v.staffId);
+    if (!st) return;
+    const byId = byIdOf(db.staff);
+    for (let d = v.from; d <= v.to; d = addDaysIso(d, 1)) {
+      if (isWork(cellFor(st, d, indexEntries(db.entries), db.settings, 'fein', byId).code, db.settings)) put({ staffId: st.id, date: d, code: 'U', flex: false }, who, 'urlaub');
+    }
+  };
   const find = (id: string) => {
     const o = db.swaps.find((x) => x.id === id);
     if (!o) throw new ApiError('not_found');
@@ -207,19 +231,91 @@ function fakeStore(): DpApi {
       if (!who || (who !== actor.staffId && !actor.isLead)) throw new ApiError('forbidden');
       if (to < from) throw new ApiError('invalid_entry', 'Bis liegt vor Von.');
       db.vacations.push({ id: uid('v'), staffId: who, year: Number(from.slice(0, 4)), from, to, priority, note, status: 'wunsch', reason: '',
-        fk4Name: null, fk4At: null, fk3Name: null, fk3At: null, createdAt: new Date().toISOString() });
+        changeKind: '', changeFrom: null, changeTo: null, fk4Name: null, fk4At: null, fk3Name: null, fk3At: null, createdAt: new Date().toISOString() });
       notifyLeads(t, 'vac_wish', 'Neuer Urlaubswunsch', `${db.staff.find((x) => x.id === who)?.short ?? ''}: ${dm(from)}–${dm(to)}`);
     },
     async vacDelete(_t, id, actor) {
       await wait();
       const v = db.vacations.find((x) => x.id === id);
       if (!v) throw new ApiError('not_found');
-      if (v.status === 'genehmigt') {
-        if (!actor.isLead && !actor.isFk3) throw new ApiError('forbidden');
-        for (const e of db.entries.filter((x) => x.staffId === v.staffId && x.date >= v.from && x.date <= v.to && x.code === 'U')) put({ ...e, code: '', flex: false }, actor.name, 'urlaub');
-      } else if (v.staffId !== actor.staffId && !actor.isLead) throw new ApiError('forbidden');
+      if (actor.isLead || actor.isFk3) {
+        if (v.status === 'genehmigt') vacUnapply(v, actor.name);
+      } else if (!((v.status === 'wunsch' || v.status === 'abgelehnt') && v.staffId === actor.staffId)) throw new ApiError('forbidden');
       db.vacations = db.vacations.filter((x) => x.id !== id);
     },
+    async vacUpdate(t, id, { from, to, priority, note }, actor) {
+      await wait();
+      const v = db.vacations.find((x) => x.id === id);
+      if (!v) throw new ApiError('not_found');
+      if (to < from) throw new ApiError('invalid_entry', 'Bis liegt vor Von.');
+      if (!actor.isLead && !(v.status === 'wunsch' && v.staffId === actor.staffId)) throw new ApiError('forbidden');
+      if (v.status === 'genehmigt') vacUnapply(v, actor.name);
+      Object.assign(v, { from, to, priority, note, year: Number(from.slice(0, 4)), changeKind: '', changeFrom: null, changeTo: null });
+      if (v.status === 'genehmigt') vacApply(v, actor.name);
+      if (v.staffId !== actor.staffId) notifyStaff(t, v.staffId, 'vac_changed', 'Urlaub geändert', `${dm(from)}–${dm(to)}`);
+    },
+    async vacChangeRequest(t, id, { kind, from, to }, actor) {
+      await wait();
+      const v = db.vacations.find((x) => x.id === id);
+      if (!v) throw new ApiError('not_found');
+      if (v.staffId !== actor.staffId) throw new ApiError('forbidden');
+      if (v.status !== 'vorgemerkt' && v.status !== 'genehmigt') throw new ApiError('invalid_entry');
+      if (kind === 'aenderung' && (!from || !to || to < from)) throw new ApiError('invalid_entry', 'Bitte gültigen neuen Zeitraum angeben.');
+      Object.assign(v, { changeKind: kind, changeFrom: from ?? null, changeTo: to ?? null });
+      notifyLeads(t, 'vac_change', kind === 'storno' ? 'Urlaub: Stornierung gewünscht' : 'Urlaub: Änderung gewünscht', `${db.staff.find((x) => x.id === v.staffId)?.short ?? ''}: ${dm(v.from)}–${dm(v.to)}`);
+    },
+    async vacChangeDecide(t, id, ok, actor) {
+      await wait();
+      if (!actor.isLead) throw new ApiError('forbidden');
+      const v = db.vacations.find((x) => x.id === id);
+      if (!v || !v.changeKind) throw new ApiError('not_found');
+      if (!ok) {
+        Object.assign(v, { changeKind: '', changeFrom: null, changeTo: null });
+        notifyStaff(t, v.staffId, 'vac_change', 'Änderungswunsch abgelehnt', 'Der Urlaub bleibt wie geplant.');
+        return;
+      }
+      if (v.status === 'genehmigt') vacUnapply(v, actor.name);
+      if (v.changeKind === 'storno') {
+        db.vacations = db.vacations.filter((x) => x.id !== id);
+        notifyStaff(t, v.staffId, 'vac_change', 'Urlaub storniert', `${dm(v.from)}–${dm(v.to)}`);
+      } else {
+        Object.assign(v, { from: v.changeFrom!, to: v.changeTo!, year: Number(v.changeFrom!.slice(0, 4)), changeKind: '', changeFrom: null, changeTo: null });
+        if (v.status === 'genehmigt') vacApply(v, actor.name);
+        notifyStaff(t, v.staffId, 'vac_change', 'Urlaub geändert', `${dm(v.from)}–${dm(v.to)}`);
+      }
+    },
+
+    async flex(_t, year) { await wait(); return clone(db.flex.filter((f) => f.date.startsWith(String(year)))); },
+    async flexAdd(t, { date, staffId, byEmployer = false }, actor) {
+      await wait();
+      const who = staffId ?? actor.staffId;
+      if (!who || (who !== actor.staffId && !actor.isLead) || (byEmployer && !actor.isLead)) throw new ApiError('forbidden');
+      const year = Number(date.slice(0, 4));
+      if (!actor.isLead && !db.settings.vacation.flexOpenYears.includes(year)) throw new ApiError('flex_closed');
+      const st = db.staff.find((x) => x.id === who)!;
+      if (isWork(cellFor(st, date, indexEntries(db.entries), db.settings, 'fein', byIdOf(db.staff)).code, db.settings)) throw new ApiError('flex_not_free');
+      const used = db.flex.filter((f) => f.staffId === who && f.date.startsWith(String(year)) && f.byEmployer === byEmployer).length;
+      if (used >= (byEmployer ? db.settings.vacation.flexEmployer : db.settings.vacation.flexOwn)) throw new ApiError('flex_limit');
+      if (db.flex.some((f) => f.staffId === who && f.date === date)) throw new ApiError('invalid_entry', 'An diesem Tag ist schon ein Flextag.');
+      db.flex.push({ id: uid('fx'), staffId: who, date, byEmployer, createdBy: actor.name, createdAt: new Date().toISOString() });
+      const e = db.entries.find((x) => x.staffId === who && x.date === date);
+      put({ staffId: who, date, code: e?.code ?? '', flex: true }, actor.name, 'flex');
+      if (byEmployer) notifyStaff(t, who, 'flex', 'Flextag vom Arbeitgeber', dm(date));
+    },
+    async flexDelete(_t, id, actor) {
+      await wait();
+      const f = db.flex.find((x) => x.id === id);
+      if (!f) throw new ApiError('not_found');
+      if (!actor.isLead && (f.byEmployer || f.staffId !== actor.staffId)) throw new ApiError('forbidden');
+      db.flex = db.flex.filter((x) => x.id !== id);
+      const e = db.entries.find((x) => x.staffId === f.staffId && x.date === f.date);
+      put({ staffId: f.staffId, date: f.date, code: e?.code ?? '', flex: false }, actor.name, 'flex');
+    },
+    async notifyAll(t, title, body) {
+      await wait();
+      for (const m of fdb.members) if (m.tenantId === t && m.status === 'active') note(t, m.id, 'dp_notice', title, body);
+    },
+
     async vacReview(t, id, ok, reason, actor) {
       await wait();
       if (!actor.isLead) throw new ApiError('forbidden');
@@ -237,13 +333,7 @@ function fakeStore(): DpApi {
       if (!v) throw new ApiError('not_found');
       if (v.status !== 'vorgemerkt') throw new ApiError('already_decided');
       Object.assign(v, { status: ok ? 'genehmigt' : 'abgelehnt', reason, fk3Name: actor.name, fk3At: new Date().toISOString() });
-      if (ok) {
-        const st = db.staff.find((x) => x.id === v.staffId)!;
-        const byId = byIdOf(db.staff);
-        for (let d = v.from; d <= v.to; d = addDaysIso(d, 1)) {
-          if (isWork(cellFor(st, d, indexEntries(db.entries), db.settings, 'fein', byId).code, db.settings)) put({ staffId: st.id, date: d, code: 'U', flex: false }, actor.name, 'urlaub');
-        }
-      }
+      if (ok) vacApply(v, actor.name);
       notifyStaff(t, v.staffId, 'vac_release', ok ? 'Urlaub genehmigt' : 'Urlaub abgelehnt', `${dm(v.from)}–${dm(v.to)}`);
     },
 
@@ -401,7 +491,20 @@ function fakeStore(): DpApi {
 }
 
 let instance: DpApi | null = null;
+/** Demo: die Demo-Abteilung hat die Beispieldaten, jede weitere Abteilung startet leer. */
 export function dpFake(): DpApi {
-  instance ??= fakeStore();
+  if (instance) return instance;
+  const stores = new Map<string, DpApi>();
+  const of = (t: string) => {
+    let st = stores.get(t);
+    if (!st) {
+      st = stores.size === 0 || t === 't-morgenrot' ? fakeStore() : fakeStore({ settings: {}, staff: [], entries: [], carpools: [] } as unknown as DpSeed);
+      stores.set(t, st);
+    }
+    return st;
+  };
+  instance = new Proxy({} as DpApi, {
+    get: (_o, key: string) => (t: string, ...rest: unknown[]) => (of(t) as unknown as Record<string, (...a: unknown[]) => unknown>)[key]!(t, ...rest),
+  });
   return instance;
 }

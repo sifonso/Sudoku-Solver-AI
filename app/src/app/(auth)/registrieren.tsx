@@ -35,7 +35,7 @@ export default function RegisterScreen() {
   const effSlug = slugEdited ? slug : slugify(company);
   const viaCode = mode === 'code';
   const errors = {
-    company: !viaCode && company.trim().length < 2 ? 'Bitte den Namen deines Betriebs eingeben.' : undefined,
+    company: !viaCode && company.trim().length < 2 ? 'Bitte den Namen deiner Abteilung eingeben.' : undefined,
     slug: !viaCode && !/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(effSlug) ? '3 bis 40 Zeichen: Kleinbuchstaben, Ziffern, Bindestrich.' : undefined,
     name: !viaCode && name.trim().length < 2 ? 'Bitte deinen Namen eingeben.' : undefined,
     code: viaCode && inviteCode.replace(/[^A-Za-z0-9]/g, '').length !== 8 ? 'Der Code hat 8 Zeichen, z. B. K7MP-4QXA.' : undefined,
@@ -64,7 +64,7 @@ export default function RegisterScreen() {
   if (register.data?.status === 'confirm_email') {
     return (
       <AuthFrame eyebrow="Fast geschafft" title="Bitte E-Mail bestätigen"
-        intro={`Wir haben einen Link an ${register.data.email} geschickt. Nach dem Klick meldest du dich an, und dein Betrieb wird angelegt.`}>
+        intro={`Wir haben einen Link an ${register.data.email} geschickt. Nach dem Klick meldest du dich an, und deine Abteilung wird angelegt.`}>
         <Text variant="sm" color="textMuted">Keine Mail da? Schau im Spam-Ordner nach. Der Link ist 24 Stunden gültig.</Text>
         <Link href="/login" asChild><Button label="Zur Anmeldung" fullWidth size="lg" /></Link>
       </AuthFrame>
@@ -72,17 +72,17 @@ export default function RegisterScreen() {
   }
 
   return (
-    <AuthFrame eyebrow="Registrieren" title={viaCode ? 'Team beitreten' : 'Betrieb anlegen'}
-      intro={viaCode ? 'Mit dem Code aus deiner Einladung landest du direkt im richtigen Betrieb.' : 'Du wirst FK4 / SL deines Betriebs und kannst danach dein Team einladen.'}>
+    <AuthFrame eyebrow="Registrieren" title={viaCode ? 'Team beitreten' : 'Abteilung anlegen'}
+      intro={viaCode ? 'Mit dem Code aus deiner Einladung landest du direkt in der richtigen Abteilung.' : 'Du wirst FK4 / SL der Abteilung und kannst danach dein Team einladen.'}>
       {failure ? <Banner tone="danger" title={failure} /> : null}
       {INVITE_ONLY ? null : (<SegmentedControl label="Art der Registrierung" value={mode} onChange={(m) => { setMode(m); setTouched(false); }}
-        options={[{ value: 'betrieb', label: 'Neuer Betrieb' }, { value: 'code', label: 'Mit Einladungscode' }]} />)}
+        options={[{ value: 'betrieb', label: 'Neue Abteilung' }, { value: 'code', label: 'Mit Einladungscode' }]} />)}
       {viaCode ? (
         <TextField label="Einladungscode" value={inviteCode} onChangeText={(v) => setInviteCode(v.toUpperCase())}
           error={show('code')} autoCapitalize="characters" placeholder="K7MP-4QXA" maxLength={9}
           hint="Den Code bekommst du von deiner FK4 bzw. SL." />
       ) : (<>
-      <TextField label="Name des Betriebs" value={company} onChangeText={setCompany} error={show('company')} autoComplete="organization" />
+      <TextField label="Name der Abteilung" value={company} onChangeText={setCompany} error={show('company')} autoComplete="organization" />
       <TextField
         label="Firmenadresse"
         value={effSlug}
@@ -99,7 +99,7 @@ export default function RegisterScreen() {
         <Checkbox label="Ich akzeptiere AGB und Datenschutzerklärung." checked={terms} onChange={setTerms} />
         {show('terms') ? <Text variant="xs" color="danger">{show('terms')}</Text> : null}
       </View>
-      <Button label={viaCode ? 'Konto anlegen und beitreten' : 'Betrieb anlegen'} onPress={submit} loading={register.isPending} fullWidth size="lg" />
+      <Button label={viaCode ? 'Konto anlegen und beitreten' : 'Abteilung anlegen'} onPress={submit} loading={register.isPending} fullWidth size="lg" />
       <View style={styles.row}>
         <Text variant="sm" color="textMuted">Schon registriert?</Text>
         <Link href="/login" accessibilityRole="link"><Text variant="sm" style={styles.link}>Anmelden</Text></Link>
